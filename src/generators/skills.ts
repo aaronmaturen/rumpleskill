@@ -3,6 +3,7 @@ import { buildDetectSkillsPrompt } from "../prompts/detect-skills.js";
 import { buildGenerateSkillPrompt } from "../prompts/generate-skill.js";
 import { runClaudeWithFiles, ClaudeOptions } from "../utils/claude.js";
 import { readFile, writeFile, ensureClaudeDir } from "../utils/fs.js";
+import { createSpinner } from "../utils/spinner.js";
 
 export interface Skill {
   name: string;
@@ -28,8 +29,12 @@ export interface GenerateSkillsResult {
  */
 export async function detectSkills(
   agentsMdContent: string,
-  model: ClaudeOptions["model"] = "haiku"
+  model: ClaudeOptions["model"] = "haiku",
+  showSpinner = false
 ): Promise<Skill[]> {
+  const spinner = showSpinner ? createSpinner() : null;
+  spinner?.start("Detecting skills from AGENTS.md...");
+
   const prompt = buildDetectSkillsPrompt(agentsMdContent);
 
   const response = await runClaudeWithFiles(prompt, {
@@ -38,6 +43,7 @@ export async function detectSkills(
   });
 
   if (!response.success || !response.result) {
+    spinner?.fail("Failed to detect skills");
     console.error("Failed to detect skills:", response.error);
     return [];
   }
@@ -60,17 +66,21 @@ export async function detectSkills(
     const skills = JSON.parse(jsonStr.trim());
 
     if (!Array.isArray(skills)) {
-      console.error("Invalid skills response: not an array");
+      spinner?.fail("Invalid skills response: not an array");
       return [];
     }
 
-    return skills.filter(
+    const validSkills = skills.filter(
       (s): s is Skill =>
         typeof s === "object" &&
         typeof s.name === "string" &&
         typeof s.description === "string"
     );
+
+    spinner?.succeed(`Detected ${validSkills.length} skills`);
+    return validSkills;
   } catch (e) {
+    spinner?.fail("Failed to parse skills JSON");
     console.error("Failed to parse skills JSON:", e);
     return [];
   }
@@ -83,7 +93,8 @@ export async function generateSkillFile(
   projectRoot: string,
   skill: Skill,
   agentsMdContent: string,
-  model: ClaudeOptions["model"] = "sonnet"
+  model: ClaudeOptions["model"] = "sonnet",
+  spinner?: ReturnType<typeof createSpinner>
 ): Promise<{ success: boolean; path?: string; error?: string }> {
   const prompt = buildGenerateSkillPrompt(
     skill.name,
@@ -149,7 +160,8 @@ export async function generateSkills(
     };
   }
 
-  console.log("Detecting skills from AGENTS.md...");
+  const spinner = createSpinner();
+  spinner.start("Detecting skills from AGENTS.md...");
 
   // Detect or use provided skills
   let skills: Skill[];
@@ -158,39 +170,44 @@ export async function generateSkills(
       name,
       description: `Skill for ${name}`
     }));
+    spinner.succeed(`Using ${skills.length} specified skills`);
   } else {
     skills = await detectSkills(agentsMdContent, "haiku");
+    if (skills.length > 0) {
+      spinner.succeed(`Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}`);
+    }
   }
 
   if (skills.length === 0) {
+    spinner.fail("No skills detected");
     return {
       success: false,
       error: "No skills detected. Check your AGENTS.md content."
     };
   }
 
-  console.log(`Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}`);
-
   // Generate each skill
   const generated: string[] = [];
   const errors: string[] = [];
 
-  for (const skill of skills) {
-    console.log(`Generating skill: ${skill.name}...`);
+  for (let i = 0; i < skills.length; i++) {
+    const skill = skills[i];
+    spinner.start(`Spinning skill ${i + 1}/${skills.length}: ${skill.name}...`);
 
     const result = await generateSkillFile(
       projectRoot,
       skill,
       agentsMdContent,
-      model
+      model,
+      spinner
     );
 
     if (result.success && result.path) {
       generated.push(result.path);
-      console.log(`  Created: ${result.path}`);
+      spinner.succeed(`Created: ${skill.name}`);
     } else {
       errors.push(`${skill.name}: ${result.error}`);
-      console.error(`  Failed: ${result.error}`);
+      spinner.fail(`Failed: ${skill.name}`);
     }
   }
 

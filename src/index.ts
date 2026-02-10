@@ -5,6 +5,7 @@ import { checkClaudeInstalled, checkClaudeAuth } from "./utils/claude.js";
 import { generateClaudeMd } from "./generators/claude-md.js";
 import { generateSkills, detectSkills } from "./generators/skills.js";
 import { readFile } from "./utils/fs.js";
+import { createSpinner } from "./utils/spinner.js";
 
 const HELP = `
 rumpleskill - Spin your codebase into golden Claude Code skills
@@ -91,25 +92,26 @@ async function main() {
   }
 
   // Check Claude CLI
-  console.log("Checking Claude Code CLI...");
+  const spinner = createSpinner();
+  spinner.start("Checking Claude Code CLI...");
 
   const installed = await checkClaudeInstalled();
   if (!installed) {
-    console.error("Error: Claude Code CLI not found.");
+    spinner.fail("Claude Code CLI not found");
     console.error("Install it from: https://claude.ai/code");
     process.exit(1);
   }
 
   const authenticated = await checkClaudeAuth();
   if (!authenticated) {
-    console.error("Error: Claude Code CLI not authenticated.");
+    spinner.fail("Claude Code CLI not authenticated");
     console.error("Run: claude login");
     process.exit(1);
   }
 
-  console.log(`Project: ${options.projectRoot}`);
-  console.log(`Model: ${options.model}`);
-  console.log("");
+  spinner.succeed("Claude Code CLI ready");
+  console.log(`\n\x1b[90mProject: ${options.projectRoot}\x1b[0m`);
+  console.log(`\x1b[90mModel: ${options.model}\x1b[0m\n`);
 
   switch (options.command) {
     case "claude-md": {
@@ -120,11 +122,11 @@ async function main() {
       });
 
       if (!result.success) {
-        console.error("Error:", result.error);
+        console.error("\n\x1b[31mError:\x1b[0m", result.error);
         process.exit(1);
       }
 
-      console.log("\nDone! AGENTS.md + CLAUDE.md generated successfully.");
+      console.log("\n\x1b[32m✨ Done!\x1b[0m Straw successfully spun into gold.");
       break;
     }
 
@@ -135,17 +137,16 @@ async function main() {
       });
 
       if (!result.success) {
-        console.error("Error:", result.error);
+        console.error("\n\x1b[31mError:\x1b[0m", result.error);
         process.exit(1);
       }
 
-      console.log(`\nDone! Generated ${result.generated?.length || 0} skills.`);
+      console.log(`\n\x1b[32m✨ Done!\x1b[0m Generated ${result.generated?.length || 0} golden skills.`);
       break;
     }
 
     case "all": {
-      // Generate AGENTS.md + CLAUDE.md first
-      console.log("=== Step 1: Generating AGENTS.md + CLAUDE.md ===\n");
+      console.log("\x1b[1m=== Step 1: Spinning Documentation ===\x1b[0m\n");
 
       const claudeMdResult = await generateClaudeMd({
         projectRoot: options.projectRoot,
@@ -154,12 +155,11 @@ async function main() {
       });
 
       if (!claudeMdResult.success) {
-        console.error("Error:", claudeMdResult.error);
+        console.error("\n\x1b[31mError:\x1b[0m", claudeMdResult.error);
         process.exit(1);
       }
 
-      // Then generate skills
-      console.log("\n=== Step 2: Generating Skills ===\n");
+      console.log("\n\x1b[1m=== Step 2: Spinning Skills ===\x1b[0m\n");
 
       const skillsResult = await generateSkills({
         projectRoot: options.projectRoot,
@@ -167,10 +167,11 @@ async function main() {
       });
 
       if (!skillsResult.success) {
-        console.error("Warning:", skillsResult.error);
+        console.error("\n\x1b[33mWarning:\x1b[0m", skillsResult.error);
       }
 
-      console.log("\nDone! Generated AGENTS.md, CLAUDE.md, and skills.");
+      console.log("\n\x1b[32m✨ Done!\x1b[0m Your codebase has been spun into gold.");
+      console.log(`   Generated AGENTS.md, CLAUDE.md, and ${skillsResult.generated?.length || 0} skills.`);
       break;
     }
 
@@ -179,23 +180,25 @@ async function main() {
       const content = await readFile(agentsMdPath);
 
       if (!content) {
-        console.error(`AGENTS.md not found at ${agentsMdPath}`);
+        console.error(`\x1b[31mError:\x1b[0m AGENTS.md not found at ${agentsMdPath}`);
         console.error("Run 'rumpleskill claude-md' first.");
         process.exit(1);
       }
 
-      console.log("Detecting skills...\n");
+      const detectSpinner = createSpinner();
+      detectSpinner.start("Detecting skills...");
 
       const skills = await detectSkills(content, "haiku");
 
       if (skills.length === 0) {
-        console.log("No skills detected.");
+        detectSpinner.fail("No skills detected");
       } else {
-        console.log("Skills that would be generated:\n");
+        detectSpinner.succeed(`Found ${skills.length} skills`);
+        console.log("\n\x1b[1mSkills that would be generated:\x1b[0m\n");
         for (const skill of skills) {
-          console.log(`  - ${skill.name}: ${skill.description}`);
+          console.log(`  \x1b[33m•\x1b[0m \x1b[1m${skill.name}\x1b[0m`);
+          console.log(`    \x1b[90m${skill.description}\x1b[0m\n`);
         }
-        console.log(`\nTotal: ${skills.length} skills`);
       }
       break;
     }

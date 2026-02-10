@@ -2,6 +2,7 @@ import * as path from "path";
 import { buildClaudeMdPrompt } from "../prompts/claude-md.js";
 import { runClaudeWithFiles, ClaudeOptions } from "../utils/claude.js";
 import { getProjectContext, writeFile, exists } from "../utils/fs.js";
+import { createSpinner } from "../utils/spinner.js";
 
 export interface GenerateClaudeMdOptions {
   projectRoot: string;
@@ -42,12 +43,14 @@ export async function generateClaudeMd(
     };
   }
 
-  console.log("Scanning project...");
+  const spinner = createSpinner();
+
+  spinner.start("Scanning project...");
 
   // Get project context
   const projectContext = await getProjectContext(projectRoot);
 
-  console.log("Generating AGENTS.md with Claude...");
+  spinner.update("Weaving golden threads of documentation...");
 
   // Build prompt
   const prompt = buildClaudeMdPrompt(projectContext);
@@ -60,6 +63,7 @@ export async function generateClaudeMd(
   });
 
   if (!response.success || !response.result) {
+    spinner.fail("Failed to generate AGENTS.md");
     return {
       success: false,
       error: response.error || "Failed to generate AGENTS.md"
@@ -81,11 +85,11 @@ export async function generateClaudeMd(
 
   // Write AGENTS.md (primary documentation)
   await writeFile(agentsMdPath, content);
-  console.log(`Generated: ${agentsMdPath}`);
+  spinner.succeed(`Generated: ${agentsMdPath}`);
 
   // Write CLAUDE.md (reference to AGENTS.md)
   await writeFile(claudeMdPath, CLAUDE_MD_REFERENCE);
-  console.log(`Generated: ${claudeMdPath} (references AGENTS.md)`);
+  console.log(`\x1b[32m✓\x1b[0m Generated: ${claudeMdPath} (references AGENTS.md)`);
 
   return {
     success: true,
