@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="rumpleskill logo" width="200">
+  <img src="logo.png" alt="rumpleskill logo">
 </p>
 
 # rumpleskill
