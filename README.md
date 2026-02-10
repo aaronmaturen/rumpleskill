@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="rumpleskill logo" width="200">
+</p>
+
 # rumpleskill
 
 *Spin your codebase into golden Claude Code skills.*
