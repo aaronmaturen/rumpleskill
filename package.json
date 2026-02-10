@@ -1,0 +1,23 @@
+{
+  "name": "rumpleskill",
+  "version": "1.0.0",
+  "description": "Spin your codebase into golden Claude Code skills",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "rumpleskill": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "keywords": ["claude", "skills", "ai", "documentation"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.2.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
