@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx src/index.ts",
+    "dev:watch": "tsx watch src/index.ts"
   },
   "keywords": ["claude", "skills", "ai", "documentation"],
   "author": "",

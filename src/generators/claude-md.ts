@@ -72,7 +72,7 @@ export async function generateClaudeMd(
     verbose,
   });
 
-  if (!response.success) {
+  if (!response.success || !response.result) {
     if (!verbose) {
       spinner?.fail("Failed to generate AGENTS.md");
     }
@@ -82,27 +82,8 @@ export async function generateClaudeMd(
     };
   }
 
-  // In verbose mode with inherited stdio, we need to read the result differently
-  // For now, we'll need the user to pipe the output or we need a different approach
-  let content = response.result || "";
-
-  // If no content captured (verbose mode), we can't write the file
-  if (!content && verbose) {
-    console.log("\n\x1b[33mNote: In verbose mode, output is shown but not captured.\x1b[0m");
-    console.log("\x1b[33mRun without -v to generate files.\x1b[0m");
-    return {
-      success: true,
-      outputPath: agentsMdPath,
-      content: ""
-    };
-  }
-
-  if (!content) {
-    return {
-      success: false,
-      error: "No content generated"
-    };
-  }
+  // Clean up the response (remove any markdown code block wrappers)
+  let content = response.result;
   if (content.startsWith("```markdown")) {
     content = content.slice(11);
   }

@@ -113,9 +113,23 @@ For large projects, consider noting where subdirectory-specific CLAUDE.md files 
 - \`frontend/CLAUDE.md\` - Frontend-specific patterns
 - \`docs/CLAUDE.md\` - Documentation conventions
 
-## OUTPUT
+## OUTPUT INSTRUCTIONS (CRITICAL)
 
-Output ONLY the CLAUDE.md content. No explanations, no markdown code blocks wrapping it.
+Your response must be the raw markdown content of CLAUDE.md - nothing else.
+
+DO NOT:
+- Summarize what you would write
+- Describe the sections
+- Add explanations before or after
+- Wrap in code blocks
+- Say "Here's the CLAUDE.md" or similar
+
+DO:
+- Start your response with "# " (the first heading)
+- Output the complete, actual markdown file content
+- Include all sections with real, specific content
+
+BEGIN YOUR RESPONSE WITH THE FIRST LINE OF CLAUDE.md:
 `;
 
 export function buildClaudeMdPrompt(projectContext?: string): string {

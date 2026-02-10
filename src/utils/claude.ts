@@ -64,53 +64,85 @@ export async function runClaude(
       "-p", prompt,
       "--model", model,
       "--max-turns", String(maxTurns),
-      "--output-format", "text",
     ];
+
+    // In verbose mode, use stream-json with partial messages for realtime output
+    if (verbose) {
+      args.push("--output-format", "stream-json");
+      args.push("--include-partial-messages");
+      args.push("--verbose");
+    } else {
+      args.push("--output-format", "text");
+    }
 
     // Add allowed tools if specified
     if (allowedTools.length > 0) {
       args.push("--allowedTools", allowedTools.join(","));
     }
 
-    // In verbose mode, use inherited stdio so user sees everything directly
-    if (verbose) {
-      const proc = spawn("claude", args, {
-        cwd: cwd || process.cwd(),
-        stdio: "inherit",
-      });
-
-      proc.on("close", (code) => {
-        if (code === 0) {
-          // In verbose/inherit mode, we don't capture output
-          // The result was already printed to console
-          resolve({ success: true, result: "" });
-        } else {
-          resolve({
-            success: false,
-            error: `Process exited with code ${code}`
-          });
-        }
-      });
-
-      proc.on("error", (err) => {
-        resolve({ success: false, error: err.message });
-      });
-
-      return;
-    }
-
-    // Non-verbose mode: capture output
     const proc = spawn("claude", args, {
       cwd: cwd || process.cwd(),
       stdio: ["pipe", "pipe", "pipe"],
     });
 
+    // Close stdin so Claude knows there's no more input coming
+    proc.stdin.end();
+
     let stdout = "";
     let stderr = "";
+    let finalResult = "";
+    let lineBuffer = "";
 
     proc.stdout.on("data", (data) => {
       const chunk = data.toString();
       stdout += chunk;
+
+      if (verbose) {
+        // Parse stream-json events
+        lineBuffer += chunk;
+        const lines = lineBuffer.split("\n");
+        lineBuffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const event = JSON.parse(line);
+
+            switch (event.type) {
+              case "system":
+                if (event.subtype === "init") {
+                  console.log(`\x1b[90m  Model: ${event.model}\x1b[0m`);
+                }
+                break;
+
+              case "assistant":
+                // Show content being generated
+                if (event.message?.content) {
+                  for (const block of event.message.content) {
+                    if (block.type === "text" && block.text) {
+                      const preview = block.text.slice(0, 100).replace(/\n/g, " ");
+                      process.stdout.write(`\r\x1b[K\x1b[90m  ${preview}${block.text.length > 100 ? "..." : ""}\x1b[0m`);
+                    }
+                    if (block.type === "tool_use") {
+                      console.log(`\n\x1b[33m  → ${block.name}\x1b[0m`);
+                    }
+                  }
+                }
+                break;
+
+              case "result":
+                if (event.result) {
+                  finalResult = event.result;
+                }
+                console.log(`\n\x1b[32m  ✓ Done (${event.num_turns} turns, ${event.duration_ms}ms)\x1b[0m`);
+                break;
+            }
+          } catch {
+            // Not valid JSON
+          }
+        }
+      }
 
       if (onOutput) {
         onOutput(chunk);
@@ -118,13 +150,23 @@ export async function runClaude(
     });
 
     proc.stderr.on("data", (data) => {
-      const chunk = data.toString();
-      stderr += chunk;
+      stderr += data.toString();
     });
 
     proc.on("close", (code) => {
+      // Process remaining buffer
+      if (verbose && lineBuffer.trim()) {
+        try {
+          const event = JSON.parse(lineBuffer);
+          if (event.type === "result" && event.result) {
+            finalResult = event.result;
+          }
+        } catch {}
+      }
+
       if (code === 0) {
-        resolve({ success: true, result: stdout.trim() });
+        const result = verbose ? finalResult : stdout.trim();
+        resolve({ success: true, result });
       } else {
         resolve({
           success: false,
