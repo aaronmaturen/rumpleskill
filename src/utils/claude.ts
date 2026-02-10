@@ -45,6 +45,50 @@ export async function checkClaudeAuth(): Promise<boolean> {
 }
 
 /**
+ * Parse a stream-json line and return a human-readable status
+ */
+function parseStreamEvent(line: string): string | null {
+  try {
+    const event = JSON.parse(line);
+
+    switch (event.type) {
+      case "assistant":
+        // Assistant is writing - show a snippet
+        if (event.message?.content) {
+          const content = event.message.content;
+          if (Array.isArray(content)) {
+            for (const block of content) {
+              if (block.type === "text" && block.text) {
+                const preview = block.text.slice(0, 100);
+                return `\x1b[90m  Writing: ${preview}${block.text.length > 100 ? "..." : ""}\x1b[0m`;
+              }
+              if (block.type === "tool_use") {
+                return `\x1b[33m  → Using tool: ${block.name}\x1b[0m`;
+              }
+            }
+          }
+        }
+        break;
+
+      case "tool_use":
+        return `\x1b[33m  → Tool: ${event.name || "unknown"}\x1b[0m`;
+
+      case "tool_result":
+        return `\x1b[32m  ✓ Tool completed\x1b[0m`;
+
+      case "result":
+        return null; // Final result, we'll handle this separately
+
+      case "error":
+        return `\x1b[31m  ✗ Error: ${event.error?.message || "unknown"}\x1b[0m`;
+    }
+  } catch {
+    // Not valid JSON, ignore
+  }
+  return null;
+}
+
+/**
  * Run a prompt through Claude Code CLI
  */
 export async function runClaude(
@@ -61,11 +105,14 @@ export async function runClaude(
   } = options;
 
   return new Promise((resolve) => {
+    // Use stream-json for verbose mode to get realtime updates
+    const outputFormat = verbose ? "stream-json" : "text";
+
     const args = [
       "-p", prompt,
       "--model", model,
       "--max-turns", String(maxTurns),
-      "--output-format", "text",
+      "--output-format", outputFormat,
     ];
 
     // Add allowed tools if specified
@@ -80,13 +127,40 @@ export async function runClaude(
 
     let stdout = "";
     let stderr = "";
+    let finalResult = "";
+    let lineBuffer = "";
 
     proc.stdout.on("data", (data) => {
       const chunk = data.toString();
       stdout += chunk;
 
       if (verbose) {
-        process.stdout.write(chunk);
+        // Parse stream-json events
+        lineBuffer += chunk;
+        const lines = lineBuffer.split("\n");
+        lineBuffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const event = JSON.parse(line);
+
+            // Capture the final result
+            if (event.type === "result" && event.result) {
+              finalResult = event.result;
+            }
+
+            // Show status
+            const status = parseStreamEvent(line);
+            if (status) {
+              console.log(status);
+            }
+          } catch {
+            // Not JSON, just print it
+            process.stdout.write(line + "\n");
+          }
+        }
       }
 
       if (onOutput) {
@@ -104,8 +178,22 @@ export async function runClaude(
     });
 
     proc.on("close", (code) => {
+      // Process any remaining buffer
+      if (verbose && lineBuffer.trim()) {
+        try {
+          const event = JSON.parse(lineBuffer);
+          if (event.type === "result" && event.result) {
+            finalResult = event.result;
+          }
+        } catch {
+          // Ignore
+        }
+      }
+
       if (code === 0) {
-        resolve({ success: true, result: stdout.trim() });
+        // In verbose mode, use the parsed result; otherwise use raw stdout
+        const result = verbose ? finalResult : stdout.trim();
+        resolve({ success: true, result });
       } else {
         resolve({
           success: false,
