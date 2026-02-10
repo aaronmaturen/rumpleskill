@@ -115,6 +115,11 @@ export async function runClaude(
       "--output-format", outputFormat,
     ];
 
+    // Claude CLI requires --verbose flag when using stream-json
+    if (verbose) {
+      args.push("--verbose");
+    }
+
     // Add allowed tools if specified
     if (allowedTools.length > 0) {
       args.push("--allowedTools", allowedTools.join(","));
