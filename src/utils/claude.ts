@@ -45,50 +45,6 @@ export async function checkClaudeAuth(): Promise<boolean> {
 }
 
 /**
- * Parse a stream-json line and return a human-readable status
- */
-function parseStreamEvent(line: string): string | null {
-  try {
-    const event = JSON.parse(line);
-
-    switch (event.type) {
-      case "assistant":
-        // Assistant is writing - show a snippet
-        if (event.message?.content) {
-          const content = event.message.content;
-          if (Array.isArray(content)) {
-            for (const block of content) {
-              if (block.type === "text" && block.text) {
-                const preview = block.text.slice(0, 100);
-                return `\x1b[90m  Writing: ${preview}${block.text.length > 100 ? "..." : ""}\x1b[0m`;
-              }
-              if (block.type === "tool_use") {
-                return `\x1b[33m  → Using tool: ${block.name}\x1b[0m`;
-              }
-            }
-          }
-        }
-        break;
-
-      case "tool_use":
-        return `\x1b[33m  → Tool: ${event.name || "unknown"}\x1b[0m`;
-
-      case "tool_result":
-        return `\x1b[32m  ✓ Tool completed\x1b[0m`;
-
-      case "result":
-        return null; // Final result, we'll handle this separately
-
-      case "error":
-        return `\x1b[31m  ✗ Error: ${event.error?.message || "unknown"}\x1b[0m`;
-    }
-  } catch {
-    // Not valid JSON, ignore
-  }
-  return null;
-}
-
-/**
  * Run a prompt through Claude Code CLI
  */
 export async function runClaude(
@@ -140,7 +96,7 @@ export async function runClaude(
       stdout += chunk;
 
       if (verbose) {
-        // Parse stream-json events
+        // Parse stream-json events line by line
         lineBuffer += chunk;
         const lines = lineBuffer.split("\n");
         lineBuffer = lines.pop() || ""; // Keep incomplete line in buffer
@@ -151,19 +107,49 @@ export async function runClaude(
           try {
             const event = JSON.parse(line);
 
-            // Capture the final result
-            if (event.type === "result" && event.result) {
-              finalResult = event.result;
-            }
+            switch (event.type) {
+              case "system":
+                if (event.subtype === "init") {
+                  console.log(`\x1b[90m  Session: ${event.session_id}\x1b[0m`);
+                  console.log(`\x1b[90m  Model: ${event.model}\x1b[0m`);
+                }
+                break;
 
-            // Show status
-            const status = parseStreamEvent(line);
-            if (status) {
-              console.log(status);
+              case "assistant":
+                if (event.message?.content) {
+                  for (const block of event.message.content) {
+                    if (block.type === "text" && block.text) {
+                      // Show first 80 chars of text
+                      const preview = block.text.slice(0, 80).replace(/\n/g, " ");
+                      console.log(`\x1b[90m  Writing: ${preview}${block.text.length > 80 ? "..." : ""}\x1b[0m`);
+                    }
+                    if (block.type === "tool_use") {
+                      console.log(`\x1b[33m  → Using tool: ${block.name}\x1b[0m`);
+                    }
+                  }
+                }
+                break;
+
+              case "tool_result":
+                console.log(`\x1b[32m  ✓ Tool completed\x1b[0m`);
+                break;
+
+              case "result":
+                if (event.result) {
+                  finalResult = event.result;
+                }
+                if (event.subtype === "success") {
+                  console.log(`\x1b[32m  ✓ Completed in ${event.duration_ms}ms (${event.num_turns} turns)\x1b[0m`);
+                }
+                break;
+
+              case "error":
+                console.log(`\x1b[31m  ✗ Error: ${event.error?.message || JSON.stringify(event)}\x1b[0m`);
+                break;
             }
           } catch {
             // Not JSON, just print it
-            process.stdout.write(line + "\n");
+            console.log(`\x1b[90m  ${line}\x1b[0m`);
           }
         }
       }
@@ -178,7 +164,7 @@ export async function runClaude(
       stderr += chunk;
 
       if (verbose) {
-        process.stderr.write(chunk);
+        process.stderr.write(`\x1b[31m${chunk}\x1b[0m`);
       }
     });
 
