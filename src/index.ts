@@ -7,15 +7,15 @@ import { generateSkills, detectSkills } from "./generators/skills.js";
 import { readFile } from "./utils/fs.js";
 
 const HELP = `
-skillgen - Generate Claude Code skills for your project
+rumpleskill - Spin your codebase into golden Claude Code skills
 
 USAGE:
-  skillgen <command> [options]
+  rumpleskill <command> [options]
 
 COMMANDS:
-  claude-md     Generate CLAUDE.md documentation
-  skills        Generate skill files based on CLAUDE.md
-  all           Generate both CLAUDE.md and skills
+  claude-md     Generate AGENTS.md + CLAUDE.md documentation
+  skills        Generate skill files based on AGENTS.md
+  all           Generate AGENTS.md, CLAUDE.md, and skills
   detect        Detect skills without generating (dry run)
 
 OPTIONS:
@@ -25,10 +25,10 @@ OPTIONS:
   --help, -h             Show this help
 
 EXAMPLES:
-  skillgen claude-md                    Generate CLAUDE.md in current directory
-  skillgen skills -p ./my-project       Generate skills for my-project
-  skillgen all --model haiku            Generate everything using haiku model
-  skillgen detect                       Show which skills would be generated
+  rumpleskill claude-md                 Generate AGENTS.md + CLAUDE.md
+  rumpleskill skills -p ./my-project    Generate skills for my-project
+  rumpleskill all --model haiku         Generate everything using haiku model
+  rumpleskill detect                    Show which skills would be generated
 `;
 
 interface Options {
@@ -124,7 +124,7 @@ async function main() {
         process.exit(1);
       }
 
-      console.log("\nDone! CLAUDE.md generated successfully.");
+      console.log("\nDone! AGENTS.md + CLAUDE.md generated successfully.");
       break;
     }
 
@@ -144,8 +144,8 @@ async function main() {
     }
 
     case "all": {
-      // Generate CLAUDE.md first
-      console.log("=== Step 1: Generating CLAUDE.md ===\n");
+      // Generate AGENTS.md + CLAUDE.md first
+      console.log("=== Step 1: Generating AGENTS.md + CLAUDE.md ===\n");
 
       const claudeMdResult = await generateClaudeMd({
         projectRoot: options.projectRoot,
@@ -170,17 +170,17 @@ async function main() {
         console.error("Warning:", skillsResult.error);
       }
 
-      console.log("\nDone! Generated CLAUDE.md and skills.");
+      console.log("\nDone! Generated AGENTS.md, CLAUDE.md, and skills.");
       break;
     }
 
     case "detect": {
-      const claudeMdPath = path.join(options.projectRoot, "CLAUDE.md");
-      const content = await readFile(claudeMdPath);
+      const agentsMdPath = path.join(options.projectRoot, "AGENTS.md");
+      const content = await readFile(agentsMdPath);
 
       if (!content) {
-        console.error(`CLAUDE.md not found at ${claudeMdPath}`);
-        console.error("Run 'skillgen claude-md' first.");
+        console.error(`AGENTS.md not found at ${agentsMdPath}`);
+        console.error("Run 'rumpleskill claude-md' first.");
         process.exit(1);
       }
 
