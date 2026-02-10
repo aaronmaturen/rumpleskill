@@ -107,6 +107,11 @@ export async function runClaude(
           try {
             const event = JSON.parse(line);
 
+            // Debug: show event type
+            if (event.type !== "assistant" || event.message?.content?.length > 0) {
+              console.log(`\x1b[90m  [${event.type}${event.subtype ? ':' + event.subtype : ''}]\x1b[0m`);
+            }
+
             switch (event.type) {
               case "system":
                 if (event.subtype === "init") {

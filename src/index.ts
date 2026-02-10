@@ -14,7 +14,7 @@ USAGE:
   rumpleskill <command> [options]
 
 COMMANDS:
-  claude-md     Generate AGENTS.md + CLAUDE.md documentation
+  agents        Generate AGENTS.md + CLAUDE.md documentation
   skills        Generate skill files based on AGENTS.md
   all           Generate AGENTS.md, CLAUDE.md, and skills
   detect        Detect skills without generating (dry run)
@@ -27,7 +27,7 @@ OPTIONS:
   --help, -h             Show this help
 
 EXAMPLES:
-  rumpleskill claude-md                 Generate AGENTS.md + CLAUDE.md
+  rumpleskill agents                    Generate AGENTS.md + CLAUDE.md
   rumpleskill skills -p ./my-project    Generate skills for my-project
   rumpleskill all --model haiku         Generate everything using haiku model
   rumpleskill all -v                    Generate with verbose output
@@ -120,7 +120,7 @@ async function main() {
   console.log(`\x1b[90mModel: ${options.model}${options.verbose ? " (verbose)" : ""}\x1b[0m\n`);
 
   switch (options.command) {
-    case "claude-md": {
+    case "agents": {
       const result = await generateClaudeMd({
         projectRoot: options.projectRoot,
         model: options.model,
@@ -191,7 +191,7 @@ async function main() {
 
       if (!content) {
         console.error(`\x1b[31mError:\x1b[0m AGENTS.md not found at ${agentsMdPath}`);
-        console.error("Run 'rumpleskill claude-md' first.");
+        console.error("Run 'rumpleskill agents' first.");
         process.exit(1);
       }
 

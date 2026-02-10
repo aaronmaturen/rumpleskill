@@ -33,7 +33,7 @@ npm link
 
 ```bash
 # Generate AGENTS.md + CLAUDE.md for a project
-rumpleskill claude-md -p /path/to/project
+rumpleskill agents -p /path/to/project
 
 # Generate skill files based on AGENTS.md
 rumpleskill skills -p /path/to/project
@@ -58,7 +58,7 @@ npm run start -- all -p /path/to/project
 
 | Command | Description |
 |---------|-------------|
-| `claude-md` | Generate AGENTS.md (primary) + CLAUDE.md (reference) |
+| `agents` | Generate AGENTS.md (primary) + CLAUDE.md (reference) |
 | `skills` | Generate skill files in `.claude/skills/` |
 | `all` | Generate AGENTS.md, CLAUDE.md, and skills |
 | `detect` | Preview skills that would be generated |
@@ -74,7 +74,7 @@ npm run start -- all -p /path/to/project
 
 ## How It Works
 
-1. **claude-md**: Scans your project and generates `AGENTS.md` (comprehensive project docs) + `CLAUDE.md` (simple reference to AGENTS.md)
+1. **agents**: Scans your project and generates `AGENTS.md` (comprehensive project docs) + `CLAUDE.md` (simple reference to AGENTS.md)
 2. **detect**: Analyzes AGENTS.md to identify which technologies should have skills
 3. **skills**: Generates individual SKILL.md files for each detected technology
 

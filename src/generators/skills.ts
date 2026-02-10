@@ -151,7 +151,7 @@ export async function generateSkills(
   if (!agentsMdContent) {
     return {
       success: false,
-      error: `AGENTS.md not found at ${agentsMdPath}. Run 'rumpleskill claude-md' first.`
+      error: `AGENTS.md not found at ${agentsMdPath}. Run 'rumpleskill agents' first.`
     };
   }
 
