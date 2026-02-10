@@ -116,7 +116,7 @@ Output ONLY the SKILL.md content. No explanations, no wrapper markdown.
 export function buildGenerateSkillPrompt(
   skillName: string,
   skillDescription: string,
-  claudeMdContext: string
+  agentsMdContext: string
 ): string {
   return `${GENERATE_SKILL_PROMPT}
 
@@ -125,12 +125,12 @@ export function buildGenerateSkillPrompt(
 - **Name**: ${skillName}
 - **Description**: ${skillDescription}
 
-## PROJECT CONTEXT (from CLAUDE.md)
+## PROJECT CONTEXT (from AGENTS.md)
 
 \`\`\`markdown
-${claudeMdContext}
+${agentsMdContext}
 \`\`\`
 
-Generate the SKILL.md for "${skillName}" now. Focus on patterns and practices SPECIFIC to this project based on the CLAUDE.md context.
+Generate the SKILL.md for "${skillName}" now. Focus on patterns and practices SPECIFIC to this project based on the AGENTS.md context.
 `;
 }

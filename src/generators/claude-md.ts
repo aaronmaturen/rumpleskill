@@ -17,22 +17,28 @@ export interface GenerateResult {
   error?: string;
 }
 
+const CLAUDE_MD_REFERENCE = `# CLAUDE.md
+
+See [AGENTS.md](AGENTS.md) for project documentation and conventions.
+`;
+
 /**
- * Generate CLAUDE.md for a project
+ * Generate AGENTS.md (primary) and CLAUDE.md (reference) for a project
  */
 export async function generateClaudeMd(
   options: GenerateClaudeMdOptions
 ): Promise<GenerateResult> {
   const { projectRoot, model = "sonnet", force = false } = options;
 
-  // Default output path
-  const outputPath = options.outputPath || path.join(projectRoot, "CLAUDE.md");
+  // Output paths
+  const agentsMdPath = path.join(projectRoot, "AGENTS.md");
+  const claudeMdPath = path.join(projectRoot, "CLAUDE.md");
 
-  // Check if file already exists
-  if (!force && await exists(outputPath)) {
+  // Check if AGENTS.md already exists
+  if (!force && await exists(agentsMdPath)) {
     return {
       success: false,
-      error: `CLAUDE.md already exists at ${outputPath}. Use --force to overwrite.`
+      error: `AGENTS.md already exists at ${agentsMdPath}. Use --force to overwrite.`
     };
   }
 
@@ -41,7 +47,7 @@ export async function generateClaudeMd(
   // Get project context
   const projectContext = await getProjectContext(projectRoot);
 
-  console.log("Generating CLAUDE.md with Claude...");
+  console.log("Generating AGENTS.md with Claude...");
 
   // Build prompt
   const prompt = buildClaudeMdPrompt(projectContext);
@@ -56,7 +62,7 @@ export async function generateClaudeMd(
   if (!response.success || !response.result) {
     return {
       success: false,
-      error: response.error || "Failed to generate CLAUDE.md"
+      error: response.error || "Failed to generate AGENTS.md"
     };
   }
 
@@ -73,14 +79,17 @@ export async function generateClaudeMd(
   }
   content = content.trim();
 
-  // Write the file
-  await writeFile(outputPath, content);
+  // Write AGENTS.md (primary documentation)
+  await writeFile(agentsMdPath, content);
+  console.log(`Generated: ${agentsMdPath}`);
 
-  console.log(`Generated: ${outputPath}`);
+  // Write CLAUDE.md (reference to AGENTS.md)
+  await writeFile(claudeMdPath, CLAUDE_MD_REFERENCE);
+  console.log(`Generated: ${claudeMdPath} (references AGENTS.md)`);
 
   return {
     success: true,
-    outputPath,
+    outputPath: agentsMdPath,
     content
   };
 }

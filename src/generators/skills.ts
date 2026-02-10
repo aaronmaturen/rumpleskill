@@ -11,7 +11,7 @@ export interface Skill {
 
 export interface GenerateSkillsOptions {
   projectRoot: string;
-  claudeMdPath?: string;
+  agentsMdPath?: string;
   skills?: string[];  // Specific skills to generate, or detect automatically
   model?: ClaudeOptions["model"];
 }
@@ -24,13 +24,13 @@ export interface GenerateSkillsResult {
 }
 
 /**
- * Detect which skills should be generated based on CLAUDE.md
+ * Detect which skills should be generated based on AGENTS.md
  */
 export async function detectSkills(
-  claudeMdContent: string,
+  agentsMdContent: string,
   model: ClaudeOptions["model"] = "haiku"
 ): Promise<Skill[]> {
-  const prompt = buildDetectSkillsPrompt(claudeMdContent);
+  const prompt = buildDetectSkillsPrompt(agentsMdContent);
 
   const response = await runClaudeWithFiles(prompt, {
     model,
@@ -82,13 +82,13 @@ export async function detectSkills(
 export async function generateSkillFile(
   projectRoot: string,
   skill: Skill,
-  claudeMdContent: string,
+  agentsMdContent: string,
   model: ClaudeOptions["model"] = "sonnet"
 ): Promise<{ success: boolean; path?: string; error?: string }> {
   const prompt = buildGenerateSkillPrompt(
     skill.name,
     skill.description,
-    claudeMdContent
+    agentsMdContent
   );
 
   const response = await runClaudeWithFiles(prompt, {
@@ -135,21 +135,21 @@ export async function generateSkills(
 ): Promise<GenerateSkillsResult> {
   const { projectRoot, model = "sonnet" } = options;
 
-  // Read CLAUDE.md
-  const claudeMdPath =
-    options.claudeMdPath ||
-    path.join(projectRoot, "CLAUDE.md");
+  // Read AGENTS.md
+  const agentsMdPath =
+    options.agentsMdPath ||
+    path.join(projectRoot, "AGENTS.md");
 
-  const claudeMdContent = await readFile(claudeMdPath);
+  const agentsMdContent = await readFile(agentsMdPath);
 
-  if (!claudeMdContent) {
+  if (!agentsMdContent) {
     return {
       success: false,
-      error: `CLAUDE.md not found at ${claudeMdPath}. Run 'skillgen claude-md' first.`
+      error: `AGENTS.md not found at ${agentsMdPath}. Run 'rumpleskill claude-md' first.`
     };
   }
 
-  console.log("Detecting skills from CLAUDE.md...");
+  console.log("Detecting skills from AGENTS.md...");
 
   // Detect or use provided skills
   let skills: Skill[];
@@ -159,13 +159,13 @@ export async function generateSkills(
       description: `Skill for ${name}`
     }));
   } else {
-    skills = await detectSkills(claudeMdContent, "haiku");
+    skills = await detectSkills(agentsMdContent, "haiku");
   }
 
   if (skills.length === 0) {
     return {
       success: false,
-      error: "No skills detected. Check your CLAUDE.md content."
+      error: "No skills detected. Check your AGENTS.md content."
     };
   }
 
@@ -181,7 +181,7 @@ export async function generateSkills(
     const result = await generateSkillFile(
       projectRoot,
       skill,
-      claudeMdContent,
+      agentsMdContent,
       model
     );
 

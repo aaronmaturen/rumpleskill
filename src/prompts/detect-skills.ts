@@ -2,7 +2,7 @@ export const DETECT_SKILLS_PROMPT = `You are a **Technology Detector** analyzing
 
 ## TASK
 
-Based on the CLAUDE.md context provided, identify ALL technologies that should have their own skill file.
+Based on the AGENTS.md context provided, identify ALL technologies that should have their own skill file.
 
 ## RULES
 
@@ -76,13 +76,13 @@ Return skills in this priority order:
 Return ONLY the JSON array. No markdown, no explanation.
 `;
 
-export function buildDetectSkillsPrompt(claudeMdContent: string): string {
+export function buildDetectSkillsPrompt(agentsMdContent: string): string {
   return `${DETECT_SKILLS_PROMPT}
 
-## CLAUDE.md CONTEXT
+## AGENTS.md CONTEXT
 
 \`\`\`markdown
-${claudeMdContent}
+${agentsMdContent}
 \`\`\`
 `;
 }

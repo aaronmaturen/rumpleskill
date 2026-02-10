@@ -32,10 +32,10 @@ npm link
 ## Usage
 
 ```bash
-# Generate CLAUDE.md for a project
+# Generate AGENTS.md + CLAUDE.md for a project
 rumpleskill claude-md -p /path/to/project
 
-# Generate skill files based on CLAUDE.md
+# Generate skill files based on AGENTS.md
 rumpleskill skills -p /path/to/project
 
 # Generate both in one go
@@ -58,9 +58,9 @@ npm run start -- all -p /path/to/project
 
 | Command | Description |
 |---------|-------------|
-| `claude-md` | Generate CLAUDE.md project documentation |
+| `claude-md` | Generate AGENTS.md (primary) + CLAUDE.md (reference) |
 | `skills` | Generate skill files in `.claude/skills/` |
-| `all` | Generate both CLAUDE.md and skills |
+| `all` | Generate AGENTS.md, CLAUDE.md, and skills |
 | `detect` | Preview skills that would be generated |
 
 ## Options
@@ -74,9 +74,11 @@ npm run start -- all -p /path/to/project
 
 ## How It Works
 
-1. **claude-md**: Scans your project (package.json, directory structure, etc.) and generates a comprehensive CLAUDE.md
-2. **detect**: Analyzes CLAUDE.md to identify which technologies should have skills
+1. **claude-md**: Scans your project and generates `AGENTS.md` (comprehensive project docs) + `CLAUDE.md` (simple reference to AGENTS.md)
+2. **detect**: Analyzes AGENTS.md to identify which technologies should have skills
 3. **skills**: Generates individual SKILL.md files for each detected technology
+
+This approach lets you maintain one source of truth (AGENTS.md) that works with both OpenAI Codex CLI and Claude Code.
 
 All AI generation happens locally through Claude Code CLI - your code never leaves your machine (beyond normal Claude Code operation).
 
@@ -84,7 +86,8 @@ All AI generation happens locally through Claude Code CLI - your code never leav
 
 ```
 your-project/
-├── CLAUDE.md              # Project documentation
+├── AGENTS.md              # Primary project documentation
+├── CLAUDE.md              # References AGENTS.md
 └── .claude/
     └── skills/
         ├── typescript/
