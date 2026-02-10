@@ -23,12 +23,14 @@ OPTIONS:
   --project, -p <path>   Project root (default: current directory)
   --model, -m <model>    Claude model: sonnet, haiku, opus (default: sonnet)
   --force, -f            Overwrite existing files
+  --verbose, -v          Show Claude's output in real-time
   --help, -h             Show this help
 
 EXAMPLES:
   rumpleskill claude-md                 Generate AGENTS.md + CLAUDE.md
   rumpleskill skills -p ./my-project    Generate skills for my-project
   rumpleskill all --model haiku         Generate everything using haiku model
+  rumpleskill all -v                    Generate with verbose output
   rumpleskill detect                    Show which skills would be generated
 `;
 
@@ -37,6 +39,7 @@ interface Options {
   projectRoot: string;
   model: "sonnet" | "haiku" | "opus";
   force: boolean;
+  verbose: boolean;
 }
 
 function parseArgs(args: string[]): Options | null {
@@ -45,6 +48,7 @@ function parseArgs(args: string[]): Options | null {
     projectRoot: process.cwd(),
     model: "sonnet",
     force: false,
+    verbose: false,
   };
 
   let i = 0;
@@ -68,6 +72,8 @@ function parseArgs(args: string[]): Options | null {
       }
     } else if (arg === "--force" || arg === "-f") {
       options.force = true;
+    } else if (arg === "--verbose" || arg === "-v") {
+      options.verbose = true;
     } else if (!arg.startsWith("-") && !options.command) {
       options.command = arg;
     }
@@ -111,7 +117,7 @@ async function main() {
 
   spinner.succeed("Claude Code CLI ready");
   console.log(`\n\x1b[90mProject: ${options.projectRoot}\x1b[0m`);
-  console.log(`\x1b[90mModel: ${options.model}\x1b[0m\n`);
+  console.log(`\x1b[90mModel: ${options.model}${options.verbose ? " (verbose)" : ""}\x1b[0m\n`);
 
   switch (options.command) {
     case "claude-md": {
@@ -119,6 +125,7 @@ async function main() {
         projectRoot: options.projectRoot,
         model: options.model,
         force: options.force,
+        verbose: options.verbose,
       });
 
       if (!result.success) {
@@ -134,6 +141,7 @@ async function main() {
       const result = await generateSkills({
         projectRoot: options.projectRoot,
         model: options.model,
+        verbose: options.verbose,
       });
 
       if (!result.success) {
@@ -152,6 +160,7 @@ async function main() {
         projectRoot: options.projectRoot,
         model: options.model,
         force: options.force,
+        verbose: options.verbose,
       });
 
       if (!claudeMdResult.success) {
@@ -164,6 +173,7 @@ async function main() {
       const skillsResult = await generateSkills({
         projectRoot: options.projectRoot,
         model: options.model,
+        verbose: options.verbose,
       });
 
       if (!skillsResult.success) {

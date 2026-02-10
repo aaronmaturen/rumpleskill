@@ -9,6 +9,7 @@ export interface GenerateClaudeMdOptions {
   outputPath?: string;
   model?: ClaudeOptions["model"];
   force?: boolean;
+  verbose?: boolean;
 }
 
 export interface GenerateResult {
@@ -29,7 +30,7 @@ See [AGENTS.md](AGENTS.md) for project documentation and conventions.
 export async function generateClaudeMd(
   options: GenerateClaudeMdOptions
 ): Promise<GenerateResult> {
-  const { projectRoot, model = "sonnet", force = false } = options;
+  const { projectRoot, model = "sonnet", force = false, verbose = false } = options;
 
   // Output paths
   const agentsMdPath = path.join(projectRoot, "AGENTS.md");
@@ -45,12 +46,20 @@ export async function generateClaudeMd(
 
   const spinner = createSpinner();
 
-  spinner.start("Scanning project...");
+  if (!verbose) {
+    spinner.start("Scanning project...");
+  } else {
+    console.log("\x1b[90m→ Scanning project...\x1b[0m\n");
+  }
 
   // Get project context
   const projectContext = await getProjectContext(projectRoot);
 
-  spinner.update("Weaving golden threads of documentation...");
+  if (!verbose) {
+    spinner.update("Weaving golden threads of documentation...");
+  } else {
+    console.log("\x1b[90m→ Running Claude...\x1b[0m\n");
+  }
 
   // Build prompt
   const prompt = buildClaudeMdPrompt(projectContext);
@@ -60,10 +69,13 @@ export async function generateClaudeMd(
     model,
     cwd: projectRoot,
     maxTurns: 10,
+    verbose,
   });
 
   if (!response.success || !response.result) {
-    spinner.fail("Failed to generate AGENTS.md");
+    if (!verbose) {
+      spinner.fail("Failed to generate AGENTS.md");
+    }
     return {
       success: false,
       error: response.error || "Failed to generate AGENTS.md"
@@ -85,7 +97,11 @@ export async function generateClaudeMd(
 
   // Write AGENTS.md (primary documentation)
   await writeFile(agentsMdPath, content);
-  spinner.succeed(`Generated: ${agentsMdPath}`);
+  if (!verbose) {
+    spinner.succeed(`Generated: ${agentsMdPath}`);
+  } else {
+    console.log(`\n\x1b[32m✓\x1b[0m Generated: ${agentsMdPath}`);
+  }
 
   // Write CLAUDE.md (reference to AGENTS.md)
   await writeFile(claudeMdPath, CLAUDE_MD_REFERENCE);

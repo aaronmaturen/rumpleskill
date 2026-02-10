@@ -15,6 +15,7 @@ export interface GenerateSkillsOptions {
   agentsMdPath?: string;
   skills?: string[];  // Specific skills to generate, or detect automatically
   model?: ClaudeOptions["model"];
+  verbose?: boolean;
 }
 
 export interface GenerateSkillsResult {
@@ -30,20 +31,17 @@ export interface GenerateSkillsResult {
 export async function detectSkills(
   agentsMdContent: string,
   model: ClaudeOptions["model"] = "haiku",
-  showSpinner = false
+  verbose = false
 ): Promise<Skill[]> {
-  const spinner = showSpinner ? createSpinner() : null;
-  spinner?.start("Detecting skills from AGENTS.md...");
-
   const prompt = buildDetectSkillsPrompt(agentsMdContent);
 
   const response = await runClaudeWithFiles(prompt, {
     model,
     maxTurns: 3,
+    verbose,
   });
 
   if (!response.success || !response.result) {
-    spinner?.fail("Failed to detect skills");
     console.error("Failed to detect skills:", response.error);
     return [];
   }
@@ -66,21 +64,17 @@ export async function detectSkills(
     const skills = JSON.parse(jsonStr.trim());
 
     if (!Array.isArray(skills)) {
-      spinner?.fail("Invalid skills response: not an array");
+      console.error("Invalid skills response: not an array");
       return [];
     }
 
-    const validSkills = skills.filter(
+    return skills.filter(
       (s): s is Skill =>
         typeof s === "object" &&
         typeof s.name === "string" &&
         typeof s.description === "string"
     );
-
-    spinner?.succeed(`Detected ${validSkills.length} skills`);
-    return validSkills;
   } catch (e) {
-    spinner?.fail("Failed to parse skills JSON");
     console.error("Failed to parse skills JSON:", e);
     return [];
   }
@@ -94,7 +88,7 @@ export async function generateSkillFile(
   skill: Skill,
   agentsMdContent: string,
   model: ClaudeOptions["model"] = "sonnet",
-  spinner?: ReturnType<typeof createSpinner>
+  verbose = false
 ): Promise<{ success: boolean; path?: string; error?: string }> {
   const prompt = buildGenerateSkillPrompt(
     skill.name,
@@ -106,6 +100,7 @@ export async function generateSkillFile(
     model,
     cwd: projectRoot,
     maxTurns: 5,
+    verbose,
   });
 
   if (!response.success || !response.result) {
@@ -144,7 +139,7 @@ export async function generateSkillFile(
 export async function generateSkills(
   options: GenerateSkillsOptions
 ): Promise<GenerateSkillsResult> {
-  const { projectRoot, model = "sonnet" } = options;
+  const { projectRoot, model = "sonnet", verbose = false } = options;
 
   // Read AGENTS.md
   const agentsMdPath =
@@ -160,8 +155,13 @@ export async function generateSkills(
     };
   }
 
-  const spinner = createSpinner();
-  spinner.start("Detecting skills from AGENTS.md...");
+  const spinner = !verbose ? createSpinner() : null;
+
+  if (!verbose) {
+    spinner?.start("Detecting skills from AGENTS.md...");
+  } else {
+    console.log("\x1b[90m→ Detecting skills...\x1b[0m\n");
+  }
 
   // Detect or use provided skills
   let skills: Skill[];
@@ -170,16 +170,19 @@ export async function generateSkills(
       name,
       description: `Skill for ${name}`
     }));
-    spinner.succeed(`Using ${skills.length} specified skills`);
+    spinner?.succeed(`Using ${skills.length} specified skills`);
   } else {
-    skills = await detectSkills(agentsMdContent, "haiku");
+    skills = await detectSkills(agentsMdContent, "haiku", verbose);
     if (skills.length > 0) {
-      spinner.succeed(`Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}`);
+      spinner?.succeed(`Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}`);
+      if (verbose) {
+        console.log(`\n\x1b[32m✓\x1b[0m Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}\n`);
+      }
     }
   }
 
   if (skills.length === 0) {
-    spinner.fail("No skills detected");
+    spinner?.fail("No skills detected");
     return {
       success: false,
       error: "No skills detected. Check your AGENTS.md content."
@@ -192,22 +195,35 @@ export async function generateSkills(
 
   for (let i = 0; i < skills.length; i++) {
     const skill = skills[i];
-    spinner.start(`Spinning skill ${i + 1}/${skills.length}: ${skill.name}...`);
+
+    if (!verbose) {
+      spinner?.start(`Spinning skill ${i + 1}/${skills.length}: ${skill.name}...`);
+    } else {
+      console.log(`\x1b[90m→ Generating skill ${i + 1}/${skills.length}: ${skill.name}...\x1b[0m\n`);
+    }
 
     const result = await generateSkillFile(
       projectRoot,
       skill,
       agentsMdContent,
       model,
-      spinner
+      verbose
     );
 
     if (result.success && result.path) {
       generated.push(result.path);
-      spinner.succeed(`Created: ${skill.name}`);
+      if (!verbose) {
+        spinner?.succeed(`Created: ${skill.name}`);
+      } else {
+        console.log(`\n\x1b[32m✓\x1b[0m Created: ${skill.name}\n`);
+      }
     } else {
       errors.push(`${skill.name}: ${result.error}`);
-      spinner.fail(`Failed: ${skill.name}`);
+      if (!verbose) {
+        spinner?.fail(`Failed: ${skill.name}`);
+      } else {
+        console.log(`\n\x1b[31m✗\x1b[0m Failed: ${skill.name}\n`);
+      }
     }
   }
 

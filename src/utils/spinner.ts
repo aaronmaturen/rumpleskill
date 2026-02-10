@@ -257,11 +257,11 @@ const LOADING_MESSAGES = [
 
 class Spinner {
   private frameIndex = 0;
-  private messageIndex = 0;
   private interval: NodeJS.Timeout | null = null;
   private messageInterval: NodeJS.Timeout | null = null;
   private currentMessage: string;
   private isSpinning = false;
+  private useRandomMessages = true;
 
   constructor() {
     this.currentMessage = this.getRandomMessage();
@@ -274,9 +274,12 @@ class Spinner {
   start(initialMessage?: string): void {
     if (this.isSpinning) return;
     this.isSpinning = true;
+    this.useRandomMessages = true;
 
     if (initialMessage) {
       this.currentMessage = initialMessage;
+    } else {
+      this.currentMessage = this.getRandomMessage();
     }
 
     // Spinner animation (every 80ms)
@@ -285,11 +288,12 @@ class Spinner {
       this.render();
     }, 80);
 
-    // Change message every 10 seconds
+    // Change message every 8 seconds (slightly faster for more variety)
     this.messageInterval = setInterval(() => {
-      this.currentMessage = this.getRandomMessage();
-      this.render();
-    }, 10000);
+      if (this.useRandomMessages) {
+        this.currentMessage = this.getRandomMessage();
+      }
+    }, 8000);
 
     this.render();
   }
@@ -299,8 +303,19 @@ class Spinner {
     process.stdout.write(`\r\x1b[K\x1b[33m${frame}\x1b[0m ${this.currentMessage}`);
   }
 
+  // Update with a specific message, then resume random after 8s
   update(message: string): void {
     this.currentMessage = message;
+    this.useRandomMessages = true; // Will pick up random on next interval
+    if (this.isSpinning) {
+      this.render();
+    }
+  }
+
+  // Set a fixed message that won't be replaced by random
+  setFixed(message: string): void {
+    this.currentMessage = message;
+    this.useRandomMessages = false;
     if (this.isSpinning) {
       this.render();
     }

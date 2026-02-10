@@ -15,6 +15,8 @@ export interface ClaudeOptions {
   allowedTools?: string[];
   maxTurns?: number;
   cwd?: string;
+  verbose?: boolean;
+  onOutput?: (chunk: string) => void;
 }
 
 /**
@@ -49,7 +51,14 @@ export async function runClaude(
   prompt: string,
   options: ClaudeOptions = {}
 ): Promise<ClaudeResponse> {
-  const { model = "sonnet", allowedTools = [], maxTurns = 5, cwd } = options;
+  const {
+    model = "sonnet",
+    allowedTools = [],
+    maxTurns = 5,
+    cwd,
+    verbose = false,
+    onOutput
+  } = options;
 
   return new Promise((resolve) => {
     const args = [
@@ -73,11 +82,25 @@ export async function runClaude(
     let stderr = "";
 
     proc.stdout.on("data", (data) => {
-      stdout += data.toString();
+      const chunk = data.toString();
+      stdout += chunk;
+
+      if (verbose) {
+        process.stdout.write(chunk);
+      }
+
+      if (onOutput) {
+        onOutput(chunk);
+      }
     });
 
     proc.stderr.on("data", (data) => {
-      stderr += data.toString();
+      const chunk = data.toString();
+      stderr += chunk;
+
+      if (verbose) {
+        process.stderr.write(chunk);
+      }
     });
 
     proc.on("close", (code) => {
