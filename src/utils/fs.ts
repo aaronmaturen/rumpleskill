@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import * as path from "path";
+import type { InstallMode } from "../types/agents.js";
 
 /**
  * Check if a path exists
@@ -115,4 +116,75 @@ export async function ensureClaudeDir(projectRoot: string): Promise<string> {
   await fs.mkdir(claudeDir, { recursive: true });
   await fs.mkdir(path.join(claudeDir, "skills"), { recursive: true });
   return claudeDir;
+}
+
+/**
+ * Ensure canonical .agents/skills directory exists
+ */
+export async function ensureCanonicalDir(projectRoot: string): Promise<string> {
+  const agentsDir = path.join(projectRoot, ".agents", "skills");
+  await fs.mkdir(agentsDir, { recursive: true });
+  return agentsDir;
+}
+
+/**
+ * Create a symlink with copy fallback
+ * @param target - The file/directory the symlink points to
+ * @param linkPath - Where to create the symlink
+ * @param mode - "symlink" or "copy"
+ */
+export async function createSymlink(
+  target: string,
+  linkPath: string,
+  mode: InstallMode = "symlink"
+): Promise<void> {
+  // Ensure parent directory exists
+  const linkDir = path.dirname(linkPath);
+  await fs.mkdir(linkDir, { recursive: true });
+
+  // Remove existing link/directory if present
+  try {
+    const stats = await fs.lstat(linkPath);
+    if (stats.isSymbolicLink()) {
+      await fs.unlink(linkPath);
+    } else if (stats.isDirectory()) {
+      await fs.rm(linkPath, { recursive: true });
+    }
+  } catch {
+    // Link doesn't exist, which is fine
+  }
+
+  if (mode === "copy") {
+    // Copy the directory recursively
+    await copyDir(target, linkPath);
+  } else {
+    // Create relative symlink
+    const relativeTarget = path.relative(linkDir, target);
+    try {
+      await fs.symlink(relativeTarget, linkPath, "dir");
+    } catch (err) {
+      // Fallback to copy if symlink fails (e.g., on some Windows systems)
+      console.warn(`Symlink failed, falling back to copy: ${(err as Error).message}`);
+      await copyDir(target, linkPath);
+    }
+  }
+}
+
+/**
+ * Copy a directory recursively
+ */
+async function copyDir(src: string, dest: string): Promise<void> {
+  await fs.mkdir(dest, { recursive: true });
+  const entries = await fs.readdir(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      await copyDir(srcPath, destPath);
+    } else {
+      await fs.copyFile(srcPath, destPath);
+    }
+  }
 }

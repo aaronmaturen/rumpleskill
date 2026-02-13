@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import { promisify } from "util";
 import { exec as execCallback } from "child_process";
+import pc from "picocolors";
 
 const exec = promisify(execCallback);
 
@@ -112,7 +113,7 @@ export async function runClaude(
             switch (event.type) {
               case "system":
                 if (event.subtype === "init") {
-                  console.log(`\x1b[90m  Model: ${event.model}\x1b[0m`);
+                  console.log(pc.dim(`  Model: ${event.model}`));
                 }
                 break;
 
@@ -122,10 +123,10 @@ export async function runClaude(
                   for (const block of event.message.content) {
                     if (block.type === "text" && block.text) {
                       const preview = block.text.slice(0, 100).replace(/\n/g, " ");
-                      process.stdout.write(`\r\x1b[K\x1b[90m  ${preview}${block.text.length > 100 ? "..." : ""}\x1b[0m`);
+                      process.stdout.write(`\r\x1b[K${pc.dim(`  ${preview}${block.text.length > 100 ? "..." : ""}`)}`);
                     }
                     if (block.type === "tool_use") {
-                      console.log(`\n\x1b[33m  → ${block.name}\x1b[0m`);
+                      console.log(`\n${pc.yellow(`  → ${block.name}`)}`);
                     }
                   }
                 }
@@ -135,7 +136,7 @@ export async function runClaude(
                 if (event.result) {
                   finalResult = event.result;
                 }
-                console.log(`\n\x1b[32m  ✓ Done (${event.num_turns} turns, ${event.duration_ms}ms)\x1b[0m`);
+                console.log(`\n${pc.green(`  ✓ Done (${event.num_turns} turns, ${event.duration_ms}ms)`)}`);
                 break;
             }
           } catch {

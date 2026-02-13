@@ -1,4 +1,5 @@
 import * as path from "path";
+import pc from "picocolors";
 import { buildClaudeMdPrompt } from "../prompts/claude-md.js";
 import { runClaudeWithFiles, ClaudeOptions } from "../utils/claude.js";
 import { getProjectContext, writeFile, exists } from "../utils/fs.js";
@@ -49,7 +50,7 @@ export async function generateClaudeMd(
   if (!verbose) {
     spinner.start("Scanning project...");
   } else {
-    console.log("\x1b[90m→ Scanning project...\x1b[0m\n");
+    console.log(pc.dim("→ Scanning project...\n"));
   }
 
   // Get project context
@@ -58,7 +59,7 @@ export async function generateClaudeMd(
   if (!verbose) {
     spinner.update("Weaving golden threads of documentation...");
   } else {
-    console.log("\x1b[90m→ Running Claude...\x1b[0m\n");
+    console.log(pc.dim("→ Running Claude...\n"));
   }
 
   // Build prompt
@@ -100,12 +101,12 @@ export async function generateClaudeMd(
   if (!verbose) {
     spinner.succeed(`Generated: ${agentsMdPath}`);
   } else {
-    console.log(`\n\x1b[32m✓\x1b[0m Generated: ${agentsMdPath}`);
+    console.log(`\n${pc.green("✓")} Generated: ${agentsMdPath}`);
   }
 
   // Write CLAUDE.md (reference to AGENTS.md)
   await writeFile(claudeMdPath, CLAUDE_MD_REFERENCE);
-  console.log(`\x1b[32m✓\x1b[0m Generated: ${claudeMdPath} (references AGENTS.md)`);
+  console.log(`${pc.green("✓")} Generated: ${claudeMdPath} (references AGENTS.md)`);
 
   return {
     success: true,

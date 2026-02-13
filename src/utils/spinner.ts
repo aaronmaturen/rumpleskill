@@ -1,3 +1,5 @@
+import pc from "picocolors";
+
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 const LOADING_MESSAGES = [
@@ -300,7 +302,7 @@ class Spinner {
 
   private render(): void {
     const frame = SPINNER_FRAMES[this.frameIndex];
-    process.stdout.write(`\r\x1b[K\x1b[33m${frame}\x1b[0m ${this.currentMessage}`);
+    process.stdout.write(`\r\x1b[K${pc.yellow(frame)} ${this.currentMessage}`);
   }
 
   // Update with a specific message, then resume random after 8s
@@ -337,7 +339,7 @@ class Spinner {
     // Clear line and print final message
     process.stdout.write("\r\x1b[K");
     if (finalMessage) {
-      console.log(`\x1b[32m✓\x1b[0m ${finalMessage}`);
+      console.log(`${pc.green("✓")} ${finalMessage}`);
     }
   }
 
@@ -347,7 +349,7 @@ class Spinner {
 
   fail(message: string): void {
     this.stop();
-    console.log(`\x1b[31m✗\x1b[0m ${message}`);
+    console.log(`${pc.red("✗")} ${message}`);
   }
 }
 

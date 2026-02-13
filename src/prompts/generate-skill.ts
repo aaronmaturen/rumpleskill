@@ -9,6 +9,8 @@ Create a SKILL.md file following this format:
 name: {skill-name-in-kebab-case}
 description: This skill should be used when the user asks to {action verbs}. {Brief capability summary}.
 version: 1.0.0
+metadata:
+  internal: false  # Set to true for internal-only skills not shown to users
 ---
 
 # {Skill Title}
@@ -103,6 +105,7 @@ Consider how this skill works with other skills in the project:
 Before completing, verify:
 - [ ] YAML frontmatter has \`name\` (kebab-case) and \`description\` (trigger phrases)
 - [ ] Description uses "This skill should be used when the user asks to..."
+- [ ] Frontmatter includes \`metadata.internal: false\` (or true for internal-only skills)
 - [ ] Code examples are from the actual project stack
 - [ ] No generic explanations Claude already knows
 - [ ] Under 200 lines

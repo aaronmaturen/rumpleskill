@@ -1,9 +1,12 @@
 import * as path from "path";
+import pc from "picocolors";
 import { buildDetectSkillsPrompt } from "../prompts/detect-skills.js";
 import { buildGenerateSkillPrompt } from "../prompts/generate-skill.js";
 import { runClaudeWithFiles, ClaudeOptions } from "../utils/claude.js";
-import { readFile, writeFile, ensureClaudeDir } from "../utils/fs.js";
+import { readFile, writeFile, ensureCanonicalDir, createSymlink } from "../utils/fs.js";
 import { createSpinner } from "../utils/spinner.js";
+import { AGENT_REGISTRY, DEFAULT_AGENT } from "../config/agents.js";
+import type { AgentId, InstallMode } from "../types/agents.js";
 
 export interface Skill {
   name: string;
@@ -16,6 +19,8 @@ export interface GenerateSkillsOptions {
   skills?: string[];  // Specific skills to generate, or detect automatically
   model?: ClaudeOptions["model"];
   verbose?: boolean;
+  agents?: AgentId[];  // Target agents (default: claude-code)
+  installMode?: InstallMode;  // symlink or copy (default: symlink)
 }
 
 export interface GenerateSkillsResult {
@@ -81,15 +86,49 @@ export async function detectSkills(
 }
 
 /**
+ * Install a skill to multiple agent directories
+ */
+export async function installSkillToAgents(
+  projectRoot: string,
+  skillName: string,
+  canonicalPath: string,
+  agents: AgentId[],
+  installMode: InstallMode
+): Promise<void> {
+  for (const agentId of agents) {
+    const config = AGENT_REGISTRY[agentId];
+    const agentSkillDir = path.join(projectRoot, config.localPath, skillName);
+
+    // Skip if this is the canonical directory
+    if (agentSkillDir === canonicalPath) {
+      continue;
+    }
+
+    await createSymlink(canonicalPath, agentSkillDir, installMode);
+  }
+}
+
+/**
  * Generate a single skill file
  */
 export async function generateSkillFile(
   projectRoot: string,
   skill: Skill,
   agentsMdContent: string,
-  model: ClaudeOptions["model"] = "sonnet",
-  verbose = false
+  options: {
+    model?: ClaudeOptions["model"];
+    verbose?: boolean;
+    agents?: AgentId[];
+    installMode?: InstallMode;
+  } = {}
 ): Promise<{ success: boolean; path?: string; error?: string }> {
+  const {
+    model = "sonnet",
+    verbose = false,
+    agents = [DEFAULT_AGENT],
+    installMode = "symlink",
+  } = options;
+
   const prompt = buildGenerateSkillPrompt(
     skill.name,
     skill.description,
@@ -123,12 +162,33 @@ export async function generateSkillFile(
   }
   content = content.trim();
 
-  // Write skill file
-  const claudeDir = await ensureClaudeDir(projectRoot);
-  const skillDir = path.join(claudeDir, "skills", skill.name);
-  const skillPath = path.join(skillDir, "SKILL.md");
+  // Determine if we need canonical directory (multi-agent)
+  const useCanonical = agents.length > 1;
 
-  await writeFile(skillPath, content);
+  let canonicalPath: string;
+  let skillPath: string;
+
+  if (useCanonical) {
+    // Write to canonical .agents/skills/ directory
+    const canonicalDir = await ensureCanonicalDir(projectRoot);
+    canonicalPath = path.join(canonicalDir, skill.name);
+    skillPath = path.join(canonicalPath, "SKILL.md");
+
+    await writeFile(skillPath, content);
+
+    // Install symlinks/copies to all agent directories
+    await installSkillToAgents(projectRoot, skill.name, canonicalPath, agents, installMode);
+  } else {
+    // Single agent: write directly to that agent's directory
+    const agentId = agents[0];
+    const config = AGENT_REGISTRY[agentId];
+    const agentDir = path.join(projectRoot, config.localPath);
+
+    canonicalPath = path.join(agentDir, skill.name);
+    skillPath = path.join(canonicalPath, "SKILL.md");
+
+    await writeFile(skillPath, content);
+  }
 
   return { success: true, path: skillPath };
 }
@@ -139,7 +199,13 @@ export async function generateSkillFile(
 export async function generateSkills(
   options: GenerateSkillsOptions
 ): Promise<GenerateSkillsResult> {
-  const { projectRoot, model = "sonnet", verbose = false } = options;
+  const {
+    projectRoot,
+    model = "sonnet",
+    verbose = false,
+    agents = [DEFAULT_AGENT],
+    installMode = "symlink",
+  } = options;
 
   // Read AGENTS.md
   const agentsMdPath =
@@ -160,7 +226,7 @@ export async function generateSkills(
   if (!verbose) {
     spinner?.start("Detecting skills from AGENTS.md...");
   } else {
-    console.log("\x1b[90m→ Detecting skills...\x1b[0m\n");
+    console.log(pc.dim("→ Detecting skills...\n"));
   }
 
   // Detect or use provided skills
@@ -176,7 +242,7 @@ export async function generateSkills(
     if (skills.length > 0) {
       spinner?.succeed(`Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}`);
       if (verbose) {
-        console.log(`\n\x1b[32m✓\x1b[0m Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}\n`);
+        console.log(`\n${pc.green("✓")} Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}\n`);
       }
     }
   }
@@ -189,40 +255,52 @@ export async function generateSkills(
     };
   }
 
-  // Generate each skill
+  // Log target agents
+  if (agents.length > 1) {
+    const agentNames = agents.map(id => AGENT_REGISTRY[id].displayName).join(", ");
+    if (!verbose) {
+      spinner?.succeed(`Target agents: ${agentNames}`);
+    } else {
+      console.log(pc.dim(`→ Target agents: ${agentNames}\n`));
+    }
+  }
+
+  // Generate all skills in parallel
+  if (!verbose) {
+    spinner?.start(`Spinning ${skills.length} skills in parallel...`);
+  } else {
+    console.log(pc.dim(`→ Generating ${skills.length} skills in parallel...\n`));
+  }
+
+  const results = await Promise.all(
+    skills.map((skill) =>
+      generateSkillFile(projectRoot, skill, agentsMdContent, {
+        model,
+        verbose,
+        agents,
+        installMode,
+      }).then((result) => ({ skill, result }))
+    )
+  );
+
   const generated: string[] = [];
   const errors: string[] = [];
 
-  for (let i = 0; i < skills.length; i++) {
-    const skill = skills[i];
-
-    if (!verbose) {
-      spinner?.start(`Spinning skill ${i + 1}/${skills.length}: ${skill.name}...`);
-    } else {
-      console.log(`\x1b[90m→ Generating skill ${i + 1}/${skills.length}: ${skill.name}...\x1b[0m\n`);
-    }
-
-    const result = await generateSkillFile(
-      projectRoot,
-      skill,
-      agentsMdContent,
-      model,
-      verbose
-    );
-
+  for (const { skill, result } of results) {
     if (result.success && result.path) {
       generated.push(result.path);
+      const installInfo = agents.length > 1 ? ` (installed to ${agents.length} agents)` : "";
       if (!verbose) {
-        spinner?.succeed(`Created: ${skill.name}`);
+        spinner?.succeed(`Created: ${skill.name}${installInfo}`);
       } else {
-        console.log(`\n\x1b[32m✓\x1b[0m Created: ${skill.name}\n`);
+        console.log(`${pc.green("✓")} Created: ${skill.name}${installInfo}`);
       }
     } else {
       errors.push(`${skill.name}: ${result.error}`);
       if (!verbose) {
         spinner?.fail(`Failed: ${skill.name}`);
       } else {
-        console.log(`\n\x1b[31m✗\x1b[0m Failed: ${skill.name}\n`);
+        console.log(`${pc.red("✗")} Failed: ${skill.name}`);
       }
     }
   }

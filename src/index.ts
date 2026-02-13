@@ -1,22 +1,25 @@
 #!/usr/bin/env node
 
 import * as path from "path";
+import pc from "picocolors";
 import { checkClaudeInstalled, checkClaudeAuth } from "./utils/claude.js";
 import { generateClaudeMd } from "./generators/claude-md.js";
 import { generateSkills, detectSkills } from "./generators/skills.js";
 import { readFile } from "./utils/fs.js";
 import { createSpinner } from "./utils/spinner.js";
+import { ALL_AGENT_IDS, parseAgentIds } from "./config/agents.js";
+import type { AgentId, InstallMode } from "./types/agents.js";
 
 const HELP = `
 rumpleskill - Spin your codebase into golden Claude Code skills
 
 USAGE:
-  rumpleskill <command> [options]
+  rumpleskill [command] [options]
 
 COMMANDS:
-  agents        Generate AGENTS.md + CLAUDE.md documentation
-  skills        Generate skill files based on AGENTS.md
-  all           Generate AGENTS.md, CLAUDE.md, and skills
+  (none)        Generate everything (default)
+  agents        Generate AGENTS.md + CLAUDE.md documentation only
+  skills        Generate skill files based on AGENTS.md only
   detect        Detect skills without generating (dry run)
 
 OPTIONS:
@@ -24,13 +27,24 @@ OPTIONS:
   --model, -m <model>    Claude model: sonnet, haiku, opus (default: sonnet)
   --force, -f            Overwrite existing files
   --verbose, -v          Show Claude's output in real-time
+  --agents, -a <list>    Target agents (comma-separated)
+  --all-agents           Install to all 12 supported agents
+  --copy                 Copy files instead of symlinking
   --help, -h             Show this help
 
+SUPPORTED AGENTS:
+  claude-code, cursor, cline, windsurf, codex, opencode,
+  github-copilot, continue, roo, amp, gemini-cli, goose
+
 EXAMPLES:
-  rumpleskill agents                    Generate AGENTS.md + CLAUDE.md
-  rumpleskill skills -p ./my-project    Generate skills for my-project
-  rumpleskill all --model haiku         Generate everything using haiku model
-  rumpleskill all -v                    Generate with verbose output
+  rumpleskill                           Generate everything
+  rumpleskill agents                    Generate AGENTS.md + CLAUDE.md only
+  rumpleskill skills                    Generate skills for claude-code (default)
+  rumpleskill skills -a cursor,cline    Generate skills for Cursor and Cline
+  rumpleskill skills --all-agents       Generate skills for all 12 agents
+  rumpleskill --all-agents              Generate everything + install to all agents
+  rumpleskill skills --all-agents --copy  Copy instead of symlink
+  rumpleskill -v                        Generate with verbose output
   rumpleskill detect                    Show which skills would be generated
 `;
 
@@ -40,6 +54,9 @@ interface Options {
   model: "sonnet" | "haiku" | "opus";
   force: boolean;
   verbose: boolean;
+  agents: AgentId[];
+  allAgents: boolean;
+  installMode: InstallMode;
 }
 
 function parseArgs(args: string[]): Options | null {
@@ -49,6 +66,9 @@ function parseArgs(args: string[]): Options | null {
     model: "sonnet",
     force: false,
     verbose: false,
+    agents: [],
+    allAgents: false,
+    installMode: "symlink",
   };
 
   let i = 0;
@@ -74,6 +94,22 @@ function parseArgs(args: string[]): Options | null {
       options.force = true;
     } else if (arg === "--verbose" || arg === "-v") {
       options.verbose = true;
+    } else if (arg === "--agents" || arg === "-a") {
+      const agentList = args[++i];
+      if (!agentList) {
+        console.error("--agents requires a comma-separated list of agent IDs");
+        return null;
+      }
+      try {
+        options.agents = parseAgentIds(agentList);
+      } catch (err) {
+        console.error((err as Error).message);
+        return null;
+      }
+    } else if (arg === "--all-agents") {
+      options.allAgents = true;
+    } else if (arg === "--copy") {
+      options.installMode = "copy";
     } else if (!arg.startsWith("-") && !options.command) {
       options.command = arg;
     }
@@ -84,13 +120,22 @@ function parseArgs(args: string[]): Options | null {
   return options;
 }
 
+/**
+ * Resolve target agents based on CLI options
+ */
+function resolveTargetAgents(options: Options): AgentId[] {
+  if (options.allAgents) {
+    return ALL_AGENT_IDS;
+  }
+  if (options.agents.length > 0) {
+    return options.agents;
+  }
+  // Default to claude-code only
+  return ["claude-code"];
+}
+
 async function main() {
   const args = process.argv.slice(2);
-
-  if (args.length === 0) {
-    console.log(HELP);
-    process.exit(0);
-  }
 
   const options = parseArgs(args);
   if (!options) {
@@ -116,10 +161,54 @@ async function main() {
   }
 
   spinner.succeed("Claude Code CLI ready");
-  console.log(`\n\x1b[90mProject: ${options.projectRoot}\x1b[0m`);
-  console.log(`\x1b[90mModel: ${options.model}${options.verbose ? " (verbose)" : ""}\x1b[0m\n`);
+
+  const targetAgents = resolveTargetAgents(options);
+  const agentDisplay = options.allAgents ? "all agents" : targetAgents.join(", ");
+
+  console.log(`\n${pc.dim(`Project: ${options.projectRoot}`)}`);
+  console.log(pc.dim(`Model: ${options.model}${options.verbose ? " (verbose)" : ""}`));
+  if (options.command === "skills" || options.command === "") {
+    console.log(pc.dim(`Agents: ${agentDisplay}${options.installMode === "copy" ? " (copy)" : ""}`));
+  }
+  console.log();
 
   switch (options.command) {
+    // Default: run agents first, then skills (skills depend on AGENTS.md)
+    case "": {
+      console.log(`${pc.bold("=== Generating ===")}\n`);
+
+      // Step 1: Generate AGENTS.md (skills depend on this)
+      const agentsResult = await generateClaudeMd({
+        projectRoot: options.projectRoot,
+        model: options.model,
+        force: options.force,
+        verbose: options.verbose,
+      });
+
+      if (!agentsResult.success) {
+        console.log(`${pc.red("✗")} agents failed: ${agentsResult.error}`);
+        process.exit(1);
+      }
+
+      // Step 2: Generate skills (individual skills generated in parallel)
+      const skillsResult = await generateSkills({
+        projectRoot: options.projectRoot,
+        model: options.model,
+        verbose: options.verbose,
+        agents: targetAgents,
+        installMode: options.installMode,
+      });
+
+      if (skillsResult.success) {
+        console.log(`\n${pc.green("✨ Done!")} Your codebase has been spun into gold.`);
+        console.log(`   Generated AGENTS.md, CLAUDE.md, and ${skillsResult.generated?.length || 0} skills.`);
+      } else {
+        console.log(`${pc.red("✗")} skills failed: ${skillsResult.error}`);
+        process.exit(1);
+      }
+      break;
+    }
+
     case "agents": {
       const result = await generateClaudeMd({
         projectRoot: options.projectRoot,
@@ -129,11 +218,11 @@ async function main() {
       });
 
       if (!result.success) {
-        console.error("\n\x1b[31mError:\x1b[0m", result.error);
+        console.error(`\n${pc.red("Error:")}`, result.error);
         process.exit(1);
       }
 
-      console.log("\n\x1b[32m✨ Done!\x1b[0m Straw successfully spun into gold.");
+      console.log(`\n${pc.green("✨ Done!")} Straw successfully spun into gold.`);
       break;
     }
 
@@ -142,46 +231,16 @@ async function main() {
         projectRoot: options.projectRoot,
         model: options.model,
         verbose: options.verbose,
+        agents: targetAgents,
+        installMode: options.installMode,
       });
 
       if (!result.success) {
-        console.error("\n\x1b[31mError:\x1b[0m", result.error);
+        console.error(`\n${pc.red("Error:")}`, result.error);
         process.exit(1);
       }
 
-      console.log(`\n\x1b[32m✨ Done!\x1b[0m Generated ${result.generated?.length || 0} golden skills.`);
-      break;
-    }
-
-    case "all": {
-      console.log("\x1b[1m=== Step 1: Spinning Documentation ===\x1b[0m\n");
-
-      const claudeMdResult = await generateClaudeMd({
-        projectRoot: options.projectRoot,
-        model: options.model,
-        force: options.force,
-        verbose: options.verbose,
-      });
-
-      if (!claudeMdResult.success) {
-        console.error("\n\x1b[31mError:\x1b[0m", claudeMdResult.error);
-        process.exit(1);
-      }
-
-      console.log("\n\x1b[1m=== Step 2: Spinning Skills ===\x1b[0m\n");
-
-      const skillsResult = await generateSkills({
-        projectRoot: options.projectRoot,
-        model: options.model,
-        verbose: options.verbose,
-      });
-
-      if (!skillsResult.success) {
-        console.error("\n\x1b[33mWarning:\x1b[0m", skillsResult.error);
-      }
-
-      console.log("\n\x1b[32m✨ Done!\x1b[0m Your codebase has been spun into gold.");
-      console.log(`   Generated AGENTS.md, CLAUDE.md, and ${skillsResult.generated?.length || 0} skills.`);
+      console.log(`\n${pc.green("✨ Done!")} Generated ${result.generated?.length || 0} golden skills.`);
       break;
     }
 
@@ -190,7 +249,7 @@ async function main() {
       const content = await readFile(agentsMdPath);
 
       if (!content) {
-        console.error(`\x1b[31mError:\x1b[0m AGENTS.md not found at ${agentsMdPath}`);
+        console.error(`${pc.red("Error:")} AGENTS.md not found at ${agentsMdPath}`);
         console.error("Run 'rumpleskill agents' first.");
         process.exit(1);
       }
@@ -204,10 +263,10 @@ async function main() {
         detectSpinner.fail("No skills detected");
       } else {
         detectSpinner.succeed(`Found ${skills.length} skills`);
-        console.log("\n\x1b[1mSkills that would be generated:\x1b[0m\n");
+        console.log(`\n${pc.bold("Skills that would be generated:")}\n`);
         for (const skill of skills) {
-          console.log(`  \x1b[33m•\x1b[0m \x1b[1m${skill.name}\x1b[0m`);
-          console.log(`    \x1b[90m${skill.description}\x1b[0m\n`);
+          console.log(`  ${pc.yellow("•")} ${pc.bold(skill.name)}`);
+          console.log(`    ${pc.dim(skill.description)}\n`);
         }
       }
       break;
