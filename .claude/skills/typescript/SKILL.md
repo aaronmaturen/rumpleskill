@@ -19,6 +19,7 @@ Guides TypeScript usage in Node.js ESM projects with strict mode enabled.
 ## Input Requirements
 
 When adding types, provide:
+
 - The function/module being typed
 - Expected input/output shapes
 - Any external API schemas involved
@@ -26,44 +27,47 @@ When adding types, provide:
 ## Patterns
 
 ### ESM Import Extensions
+
 ```typescript
 // REQUIRED: Always use .js extensions in imports (not .ts)
-import { callClaude } from '../utils/claude.js';
-import { scanDirectory } from '../utils/file-system.js';
+import { callClaude } from "../utils/claude.js";
+import { scanDirectory } from "../utils/file-system.js";
 
 // TypeScript compiles .ts to .js, so imports reference the OUTPUT
 ```
 
 ### File System Types
+
 ```typescript
-import { readdir, readFile, stat } from 'fs/promises';
-import { join } from 'path';
+import { readdir, readFile, stat } from "fs/promises";
+import { join } from "path";
 
 async function scanDirectory(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
-  
+
   const files: string[] = [];
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
-    
+
     if (entry.isDirectory()) {
-      files.push(...await scanDirectory(fullPath));
+      files.push(...(await scanDirectory(fullPath)));
     } else if (entry.isFile()) {
       files.push(fullPath);
     }
   }
-  
+
   return files;
 }
 ```
 
 ### API Response Types
+
 ```typescript
 // Define response shapes explicitly
 interface ClaudeStreamEvent {
-  type: 'content_block_delta' | 'message_stop';
+  type: "content_block_delta" | "message_stop";
   delta?: {
-    type: 'text_delta';
+    type: "text_delta";
     text: string;
   };
 }
@@ -78,6 +82,7 @@ async function callClaude(
 ```
 
 ### Generator Function Signatures
+
 ```typescript
 // Generators return Promise<string> of markdown content
 export async function generateClaudeMd(): Promise<string> {
@@ -88,7 +93,7 @@ export async function generateClaudeMd(): Promise<string> {
 // Utility functions use specific return types
 export async function readFileContent(path: string): Promise<string | null> {
   try {
-    return await readFile(path, 'utf-8');
+    return await readFile(path, "utf-8");
   } catch {
     return null;
   }
@@ -96,18 +101,19 @@ export async function readFileContent(path: string): Promise<string | null> {
 ```
 
 ### CLI Argument Parsing
+
 ```typescript
 // Type command-line args explicitly
 interface CliArgs {
-  command: 'agents' | string;
+  command: "agents" | string;
   flags: Set<string>;
 }
 
 function parseArgs(argv: string[]): CliArgs {
   const args = argv.slice(2);
-  const flags = new Set(args.filter(a => a.startsWith('--')));
-  const command = args.find(a => !a.startsWith('--')) ?? '';
-  
+  const flags = new Set(args.filter((a) => a.startsWith("--")));
+  const command = args.find((a) => !a.startsWith("--")) ?? "";
+
   return { command, flags };
 }
 ```
@@ -115,6 +121,7 @@ function parseArgs(argv: string[]): CliArgs {
 ## Configuration
 
 ### tsconfig.json
+
 ```json
 {
   "compilerOptions": {
@@ -136,6 +143,7 @@ function parseArgs(argv: string[]): CliArgs {
 ```
 
 ### package.json Type Module
+
 ```json
 {
   "type": "module",

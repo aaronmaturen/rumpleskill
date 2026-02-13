@@ -9,21 +9,25 @@ A CLI tool for generating AI agent skill definitions from codebases. Scans your 
 ## Tech Stack
 
 ### Core
+
 - **Language**: TypeScript 5.x (strict mode enabled)
 - **Runtime**: Node.js 20.x with native ESM
 - **Build Tool**: `tsc` (TypeScript compiler)
 - **Process Management**: `tsx` for development
 
 ### CLI Framework
+
 - Native Node.js with `process.argv` parsing
 - No external CLI framework dependencies
 
 ### File System Operations
+
 - Native Node.js `fs/promises` API
 - Recursive directory traversal
 - JSON and Markdown file parsing
 
 ### Development
+
 - **Type System**: TypeScript strict mode with ESM targets
 - **Watch Mode**: `tsx watch` for hot reload during development
 
@@ -50,21 +54,26 @@ rumpleskill/
 ## Development Setup
 
 ### Prerequisites
+
 - Node.js 20.x or higher
 - `ANTHROPIC_API_KEY` environment variable set
 
 ### Installation
+
 ```bash
 npm install
 ```
 
 ### Environment Variables
+
 Create a `.env` file or export:
+
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ### Running Locally
+
 ```bash
 # Development mode with watch
 npm run dev:watch
@@ -79,41 +88,51 @@ npm start
 
 ## Key Commands
 
-| Command | Purpose |
-|---------|---------|
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm start` | Run compiled CLI from `dist/index.js` |
-| `npm run dev` | Run TypeScript directly with `tsx` |
-| `npm run dev:watch` | Auto-reload on file changes |
-| `rumpleskill agents` | Generate AGENTS.md file (via CLI) |
+| Command              | Purpose                               |
+| -------------------- | ------------------------------------- |
+| `npm run build`      | Compile TypeScript to `dist/`         |
+| `npm start`          | Run compiled CLI from `dist/index.js` |
+| `npm run dev`        | Run TypeScript directly with `tsx`    |
+| `npm run dev:watch`  | Auto-reload on file changes           |
+| `rumpleskill agents` | Generate AGENTS.md file (via CLI)     |
 
 ## Architecture
 
 ### CLI Entry Point (`src/index.ts`)
+
 Parses command-line arguments and routes to appropriate generator:
+
 - `agents` command → calls `generateClaudeMd()` from generators
 - Handles `--verbose` flag for stream-json output with inherited stdio
 
 ### Generators Pattern
+
 Each generator is a module in `src/generators/` that:
+
 1. Exports a `generate*()` function
 2. Calls Claude API with specialized prompts
 3. Returns generated markdown content
 
 ### Prompt System
+
 System prompts are stored in `src/prompts/` as separate modules:
+
 - Allows versioning of prompts independently
 - Each prompt defines the AI's role and output requirements
 - Prompts include technology adaptability instructions
 
 ### File System Utilities
+
 `src/utils/file-system.ts` provides:
+
 - `scanDirectory()` - Recursive directory traversal with ignore patterns
 - `readFileContent()` - Safe file reading with error handling
 - Excludes: `node_modules/`, `.git/`, `dist/`, hidden files
 
 ### Claude API Integration
+
 `src/utils/claude.ts` handles:
+
 - Streaming API calls to Claude (Sonnet 4.5)
 - JSON vs. text output modes
 - Verbose mode with stream-json for real-time progress
@@ -122,11 +141,13 @@ System prompts are stored in `src/prompts/` as separate modules:
 ## Code Conventions
 
 ### File Naming
+
 - `kebab-case.ts` for all files
 - Generators: `src/generators/{skill-name}.ts`
 - Prompts: `src/prompts/{skill-name}.ts`
 
 ### Module Pattern
+
 ```typescript
 // Generators export main generation function
 export async function generateClaudeMd(): Promise<string> {
@@ -138,11 +159,13 @@ export const CLAUDE_MD_PROMPT = `...`;
 ```
 
 ### Error Handling
+
 - Use `try/catch` blocks around file I/O
 - Propagate errors to CLI level for user-facing messages
 - Log errors to stderr
 
 ### Async/Await
+
 - All file operations use `async/await`
 - No callbacks or `.then()` chains
 - Top-level await enabled via ESM
@@ -152,11 +175,13 @@ export const CLAUDE_MD_PROMPT = `...`;
 **Current Status**: No test suite implemented yet.
 
 ### Planned Testing Approach
+
 - **Unit Tests**: Vitest for generator logic
 - **Integration Tests**: Test full CLI commands with fixtures
 - **Mocking**: Mock Claude API responses for deterministic tests
 
 ### Manual Testing
+
 ```bash
 # Test AGENTS.md generation in this repo
 npm run dev:watch
@@ -171,9 +196,11 @@ node /path/to/rumpleskill/dist/index.js agents
 ### Adding a New Skill Generator
 
 1. **Create prompt file**:
+
    ```bash
    touch src/prompts/my-skill.ts
    ```
+
    ```typescript
    export const MY_SKILL_PROMPT = `
    You are an expert at generating...
@@ -181,13 +208,15 @@ node /path/to/rumpleskill/dist/index.js agents
    ```
 
 2. **Create generator**:
+
    ```bash
    touch src/generators/my-skill.ts
    ```
+
    ```typescript
-   import { callClaude } from '../utils/claude.js';
-   import { MY_SKILL_PROMPT } from '../prompts/my-skill.js';
-   
+   import { callClaude } from "../utils/claude.js";
+   import { MY_SKILL_PROMPT } from "../prompts/my-skill.js";
+
    export async function generateMySkill(): Promise<string> {
      const context = await gatherContext();
      return await callClaude(MY_SKILL_PROMPT, context);
@@ -222,11 +251,12 @@ node /path/to/rumpleskill/dist/index.js agents
 
 ## Environment Variables
 
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `ANTHROPIC_API_KEY` | Yes | API key for Claude | `sk-ant-api03-xxx` |
+| Variable            | Required | Description        | Example            |
+| ------------------- | -------- | ------------------ | ------------------ |
+| `ANTHROPIC_API_KEY` | Yes      | API key for Claude | `sk-ant-api03-xxx` |
 
 ### Setting Up
+
 ```bash
 # Option 1: Export in shell
 export ANTHROPIC_API_KEY=sk-ant-api03-xxx
@@ -241,19 +271,25 @@ echo 'export ANTHROPIC_API_KEY=sk-ant-api03-xxx' >> ~/.bashrc
 ## Development Philosophy
 
 ### Minimal Dependencies
+
 This project intentionally avoids frameworks to:
+
 - Keep the tool lightweight and fast
 - Reduce supply chain security risks
 - Make the codebase easy to audit and understand
 
 ### AI-First Documentation
+
 The primary output (AGENTS.md, CLAUDE.md) is optimized for AI consumption:
+
 - Structured markdown with clear sections
 - Technology-agnostic prompts that adapt to any stack
 - Includes "why" not just "what" in generated docs
 
 ### Streaming by Default
+
 CLI uses inherited stdio for real-time feedback:
+
 - Users see generation progress immediately
 - No buffering delays for large outputs
 - Verbose mode shows stream-json for debugging
@@ -261,6 +297,7 @@ CLI uses inherited stdio for real-time feedback:
 ## Future Enhancements
 
 Potential additions (not yet implemented):
+
 - Multiple skill types beyond CLAUDE.md
 - Custom prompt templates via config files
 - Interactive CLI with prompts (using inquirer or similar)

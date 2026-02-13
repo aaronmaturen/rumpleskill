@@ -112,7 +112,9 @@ export function parseAgentIds(input: string): AgentId[] {
   }
 
   if (invalid.length > 0) {
-    throw new Error(`Invalid agent IDs: ${invalid.join(", ")}. Valid agents: ${ALL_AGENT_IDS.join(", ")}`);
+    throw new Error(
+      `Invalid agent IDs: ${invalid.join(", ")}. Valid agents: ${ALL_AGENT_IDS.join(", ")}`
+    );
   }
 
   return valid;

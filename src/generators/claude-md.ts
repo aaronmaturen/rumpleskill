@@ -28,9 +28,7 @@ See [AGENTS.md](AGENTS.md) for project documentation and conventions.
 /**
  * Generate AGENTS.md (primary) and CLAUDE.md (reference) for a project
  */
-export async function generateClaudeMd(
-  options: GenerateClaudeMdOptions
-): Promise<GenerateResult> {
+export async function generateClaudeMd(options: GenerateClaudeMdOptions): Promise<GenerateResult> {
   const { projectRoot, model = "sonnet", force = false, verbose = false } = options;
 
   // Output paths
@@ -38,10 +36,10 @@ export async function generateClaudeMd(
   const claudeMdPath = path.join(projectRoot, "CLAUDE.md");
 
   // Check if AGENTS.md already exists
-  if (!force && await exists(agentsMdPath)) {
+  if (!force && (await exists(agentsMdPath))) {
     return {
       success: false,
-      error: `AGENTS.md already exists at ${agentsMdPath}. Use --force to overwrite.`
+      error: `AGENTS.md already exists at ${agentsMdPath}. Use --force to overwrite.`,
     };
   }
 
@@ -79,7 +77,7 @@ export async function generateClaudeMd(
     }
     return {
       success: false,
-      error: response.error || "Failed to generate AGENTS.md"
+      error: response.error || "Failed to generate AGENTS.md",
     };
   }
 
@@ -111,6 +109,6 @@ export async function generateClaudeMd(
   return {
     success: true,
     outputPath: agentsMdPath,
-    content
+    content,
   };
 }

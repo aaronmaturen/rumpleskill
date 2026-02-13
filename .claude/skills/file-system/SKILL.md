@@ -20,31 +20,24 @@ Handles recursive directory traversal, file reading, and parsing operations usin
 ### Directory Scanning with Ignore Patterns
 
 ```typescript
-import { readdir, stat } from 'fs/promises';
-import { join } from 'path';
+import { readdir, stat } from "fs/promises";
+import { join } from "path";
 
-const IGNORE_PATTERNS = [
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  '.next',
-  'coverage'
-];
+const IGNORE_PATTERNS = ["node_modules", ".git", "dist", "build", ".next", "coverage"];
 
 export async function scanDirectory(dir: string): Promise<string[]> {
   const files: string[] = [];
-  
+
   async function traverse(currentPath: string): Promise<void> {
     const entries = await readdir(currentPath, { withFileTypes: true });
-    
+
     for (const entry of entries) {
       // Skip hidden files and ignored directories
-      if (entry.name.startsWith('.')) continue;
+      if (entry.name.startsWith(".")) continue;
       if (IGNORE_PATTERNS.includes(entry.name)) continue;
-      
+
       const fullPath = join(currentPath, entry.name);
-      
+
       if (entry.isDirectory()) {
         await traverse(fullPath);
       } else {
@@ -52,7 +45,7 @@ export async function scanDirectory(dir: string): Promise<string[]> {
       }
     }
   }
-  
+
   await traverse(dir);
   return files;
 }
@@ -61,11 +54,11 @@ export async function scanDirectory(dir: string): Promise<string[]> {
 ### Safe File Content Reading
 
 ```typescript
-import { readFile } from 'fs/promises';
+import { readFile } from "fs/promises";
 
 export async function readFileContent(path: string): Promise<string | null> {
   try {
-    return await readFile(path, 'utf-8');
+    return await readFile(path, "utf-8");
   } catch (error) {
     console.error(`Failed to read ${path}:`, error);
     return null;
@@ -78,13 +71,9 @@ Use `utf-8` encoding explicitly. Return `null` on errors rather than throwing to
 ### Filtering by Extension
 
 ```typescript
-const markdownFiles = allFiles.filter(f => 
-  f.endsWith('.md') || f.endsWith('.markdown')
-);
+const markdownFiles = allFiles.filter((f) => f.endsWith(".md") || f.endsWith(".markdown"));
 
-const packageJsons = allFiles.filter(f => 
-  f.endsWith('package.json')
-);
+const packageJsons = allFiles.filter((f) => f.endsWith("package.json"));
 ```
 
 Use `.endsWith()` rather than regex for simple extension checks.
@@ -95,7 +84,7 @@ Use `.endsWith()` rather than regex for simple extension checks.
 async function readPackageJson(path: string): Promise<Record<string, any> | null> {
   const content = await readFileContent(path);
   if (!content) return null;
-  
+
   try {
     return JSON.parse(content);
   } catch (error) {
@@ -112,25 +101,24 @@ Always wrap `JSON.parse()` in try-catch when reading untrusted files.
 ```typescript
 async function gatherCodebaseContext(): Promise<string> {
   const rootDir = process.cwd();
-  
+
   // Scan for relevant files
   const allFiles = await scanDirectory(rootDir);
-  const markdownFiles = allFiles.filter(f => f.endsWith('.md'));
-  const configFiles = allFiles.filter(f => 
-    f.endsWith('package.json') || 
-    f.endsWith('tsconfig.json')
+  const markdownFiles = allFiles.filter((f) => f.endsWith(".md"));
+  const configFiles = allFiles.filter(
+    (f) => f.endsWith("package.json") || f.endsWith("tsconfig.json")
   );
-  
+
   // Read and combine content
-  let context = '';
-  
+  let context = "";
+
   for (const file of markdownFiles) {
     const content = await readFileContent(file);
     if (content) {
       context += `\n## ${file}\n\n${content}\n`;
     }
   }
-  
+
   return context;
 }
 ```
@@ -156,6 +144,7 @@ Build context strings by accumulating file contents with clear section headers.
 ## Integration Points
 
 ### With Claude API
+
 Pass scanned context as user message content:
 
 ```typescript
@@ -164,11 +153,12 @@ await callClaude(systemPrompt, context);
 ```
 
 ### With Generators
+
 Each generator uses file system utilities to build specialized context:
 
 ```typescript
 // src/generators/claude-md.ts
-import { scanDirectory, readFileContent } from '../utils/file-system.js';
+import { scanDirectory, readFileContent } from "../utils/file-system.js";
 
 export async function generateClaudeMd(): Promise<string> {
   const files = await scanDirectory(process.cwd());
@@ -184,9 +174,7 @@ export async function generateClaudeMd(): Promise<string> {
 
 ```typescript
 // Parallel read example
-const contents = await Promise.all(
-  files.map(f => readFileContent(f))
-);
+const contents = await Promise.all(files.map((f) => readFileContent(f)));
 ```
 
 ## Limitations

@@ -168,7 +168,9 @@ async function main() {
   console.log(`\n${pc.dim(`Project: ${options.projectRoot}`)}`);
   console.log(pc.dim(`Model: ${options.model}${options.verbose ? " (verbose)" : ""}`));
   if (options.command === "skills" || options.command === "") {
-    console.log(pc.dim(`Agents: ${agentDisplay}${options.installMode === "copy" ? " (copy)" : ""}`));
+    console.log(
+      pc.dim(`Agents: ${agentDisplay}${options.installMode === "copy" ? " (copy)" : ""}`)
+    );
   }
   console.log();
 
@@ -201,7 +203,9 @@ async function main() {
 
       if (skillsResult.success) {
         console.log(`\n${pc.green("✨ Done!")} Your codebase has been spun into gold.`);
-        console.log(`   Generated AGENTS.md, CLAUDE.md, and ${skillsResult.generated?.length || 0} skills.`);
+        console.log(
+          `   Generated AGENTS.md, CLAUDE.md, and ${skillsResult.generated?.length || 0} skills.`
+        );
       } else {
         console.log(`${pc.red("✗")} skills failed: ${skillsResult.error}`);
         process.exit(1);
@@ -240,7 +244,9 @@ async function main() {
         process.exit(1);
       }
 
-      console.log(`\n${pc.green("✨ Done!")} Generated ${result.generated?.length || 0} golden skills.`);
+      console.log(
+        `\n${pc.green("✨ Done!")} Generated ${result.generated?.length || 0} golden skills.`
+      );
       break;
     }
 

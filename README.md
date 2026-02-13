@@ -4,7 +4,7 @@
 
 # rumpleskill
 
-*Spin your codebase into golden Claude Code skills.*
+_Spin your codebase into golden Claude Code skills._
 
 A local tool that automatically detects your tech stack and generates Claude Code skills for your projects. Uses Claude Code CLI directly - no external API required.
 
@@ -54,25 +54,25 @@ rumpleskill -a cursor,cline
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| *(none)* | Generate everything (default) |
-| `agents` | Generate AGENTS.md + CLAUDE.md only |
-| `skills` | Generate skill files only |
+| Command  | Description                            |
+| -------- | -------------------------------------- |
+| _(none)_ | Generate everything (default)          |
+| `agents` | Generate AGENTS.md + CLAUDE.md only    |
+| `skills` | Generate skill files only              |
 | `detect` | Preview skills that would be generated |
 
 ## Options
 
-| Option | Description |
-|--------|-------------|
-| `-p, --project <path>` | Project root directory (default: current dir) |
-| `-m, --model <model>` | Claude model: `sonnet`, `haiku`, `opus` (default: sonnet) |
-| `-f, --force` | Overwrite existing files |
-| `-v, --verbose` | Show Claude's output in real-time |
-| `-a, --agents <list>` | Target agents (comma-separated) |
-| `--all-agents` | Install to all 12 supported agents |
-| `--copy` | Copy files instead of symlinking |
-| `-h, --help` | Show help |
+| Option                 | Description                                               |
+| ---------------------- | --------------------------------------------------------- |
+| `-p, --project <path>` | Project root directory (default: current dir)             |
+| `-m, --model <model>`  | Claude model: `sonnet`, `haiku`, `opus` (default: sonnet) |
+| `-f, --force`          | Overwrite existing files                                  |
+| `-v, --verbose`        | Show Claude's output in real-time                         |
+| `-a, --agents <list>`  | Target agents (comma-separated)                           |
+| `--all-agents`         | Install to all 12 supported agents                        |
+| `--copy`               | Copy files instead of symlinking                          |
+| `-h, --help`           | Show help                                                 |
 
 ## How It Works
 
@@ -142,20 +142,20 @@ For comprehensive documentation on Claude Code skills, see the [official skills 
 
 rumpleskill can generate skills for multiple AI coding assistants:
 
-| Agent | Directory |
-|-------|-----------|
-| Claude Code | `.claude/skills/` |
-| Cursor | `.cursor/skills/` |
-| Cline | `.cline/skills/` |
-| Windsurf | `.windsurf/skills/` |
+| Agent          | Directory                 |
+| -------------- | ------------------------- |
+| Claude Code    | `.claude/skills/`         |
+| Cursor         | `.cursor/skills/`         |
+| Cline          | `.cline/skills/`          |
+| Windsurf       | `.windsurf/skills/`       |
 | GitHub Copilot | `.github/copilot/skills/` |
-| Continue | `.continue/skills/` |
-| Codex CLI | `.codex/skills/` |
-| OpenCode | `.opencode/skills/` |
-| Roo | `.roo/skills/` |
-| Amp | `.amp/skills/` |
-| Gemini CLI | `.gemini/skills/` |
-| Goose | `.goose/skills/` |
+| Continue       | `.continue/skills/`       |
+| Codex CLI      | `.codex/skills/`          |
+| OpenCode       | `.opencode/skills/`       |
+| Roo            | `.roo/skills/`            |
+| Amp            | `.amp/skills/`            |
+| Gemini CLI     | `.gemini/skills/`         |
+| Goose          | `.goose/skills/`          |
 
 Use `--all-agents` to generate for all, or `-a cursor,cline` for specific agents.
 

@@ -18,6 +18,7 @@ Native Node.js CLI patterns for `rumpleskill` without external framework depende
 ## Input Requirements
 
 Commands are invoked as:
+
 ```bash
 rumpleskill <command> [--flags]
 ```
@@ -27,18 +28,19 @@ Entry point: `src/index.ts`
 ## Patterns
 
 ### Command Routing
+
 ```typescript
 // src/index.ts
 const args = process.argv.slice(2);
 const command = args[0];
 const flags = args.slice(1);
 
-const isVerbose = flags.includes('--verbose');
+const isVerbose = flags.includes("--verbose");
 
-if (command === 'agents') {
+if (command === "agents") {
   const content = await generateClaudeMd();
-  await fs.writeFile('AGENTS.md', content);
-  console.log('Generated AGENTS.md');
+  await fs.writeFile("AGENTS.md", content);
+  console.log("Generated AGENTS.md");
 } else {
   console.error(`Unknown command: ${command}`);
   process.exit(1);
@@ -48,25 +50,27 @@ if (command === 'agents') {
 **When to use**: Primary CLI entry point. Keep flat—avoid nested routing for small CLIs.
 
 ### Verbose Mode with Stream-JSON
+
 ```typescript
 // src/utils/claude.ts
 if (isVerbose) {
-  const process = spawn('claude', ['--stream-json'], {
-    stdio: 'inherit'  // Pass through stdout/stderr
+  const process = spawn("claude", ["--stream-json"], {
+    stdio: "inherit", // Pass through stdout/stderr
   });
-  await new Promise((resolve) => process.on('close', resolve));
+  await new Promise((resolve) => process.on("close", resolve));
 }
 ```
 
 **When to use**: Real-time progress for long-running AI generation. User sees token streaming immediately.
 
 ### Error Handling
+
 ```typescript
 try {
   const content = await generateClaudeMd();
-  await fs.writeFile('AGENTS.md', content);
+  await fs.writeFile("AGENTS.md", content);
 } catch (error) {
-  console.error('Error:', error.message);
+  console.error("Error:", error.message);
   process.exit(1);
 }
 ```
@@ -74,16 +78,17 @@ try {
 **When to use**: Top-level error boundary. Always exit with non-zero code on failure for CI/CD compatibility.
 
 ### Output Conventions
+
 ```typescript
 // Success messages to stdout
-console.log('Generated AGENTS.md');
+console.log("Generated AGENTS.md");
 
 // Errors to stderr
 console.error(`Unknown command: ${command}`);
 
 // Progress updates (if not streaming)
-console.log('Scanning codebase...');
-console.log('Calling Claude API...');
+console.log("Scanning codebase...");
+console.log("Calling Claude API...");
 ```
 
 **When to use**: Follow Unix conventions—stdout for data, stderr for diagnostics.
@@ -106,14 +111,16 @@ console.log('Calling Claude API...');
 ## Adding a New Command
 
 1. **Add routing** in `src/index.ts`:
+
 ```typescript
-if (command === 'my-command') {
+if (command === "my-command") {
   const result = await generateMySkill();
   console.log(result);
 }
 ```
 
 2. **Create generator** in `src/generators/my-skill.ts`:
+
 ```typescript
 export async function generateMySkill(): Promise<string> {
   // Implementation
@@ -121,6 +128,7 @@ export async function generateMySkill(): Promise<string> {
 ```
 
 3. **Test with dev script**:
+
 ```bash
 npm run dev -- my-command --verbose
 ```

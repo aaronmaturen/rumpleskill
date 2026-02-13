@@ -27,34 +27,30 @@ Integration with Anthropic's Claude API using native fetch and streaming respons
 ### Basic Streaming Call
 
 ```typescript
-import Anthropic from '@anthropic-ai/sdk';
+import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-export async function callClaude(
-  systemPrompt: string,
-  userMessage: string
-): Promise<string> {
+export async function callClaude(systemPrompt: string, userMessage: string): Promise<string> {
   const stream = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: "claude-sonnet-4-5-20250929",
     max_tokens: 16000,
     temperature: 1,
     system: systemPrompt,
-    messages: [{ role: 'user', content: userMessage }],
+    messages: [{ role: "user", content: userMessage }],
     stream: true,
   });
 
-  let fullResponse = '';
+  let fullResponse = "";
   for await (const event of stream) {
-    if (event.type === 'content_block_delta' && 
-        event.delta.type === 'text_delta') {
+    if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
       process.stdout.write(event.delta.text);
       fullResponse += event.delta.text;
     }
   }
-  
+
   return fullResponse;
 }
 ```
@@ -67,10 +63,10 @@ Use this pattern when you want real-time output visible to users (default for CL
 // In src/utils/claude.ts
 if (verbose) {
   const stream = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: "claude-sonnet-4-5-20250929",
     max_tokens: 16000,
     system: systemPrompt,
-    messages: [{ role: 'user', content: userMessage }],
+    messages: [{ role: "user", content: userMessage }],
     stream: true,
   });
 
@@ -88,20 +84,20 @@ Use for debugging or when parent process needs structured events (src/index.ts h
 
 ```typescript
 // src/generators/claude-md.ts pattern
-import { scanDirectory, readFileContent } from '../utils/file-system.js';
+import { scanDirectory, readFileContent } from "../utils/file-system.js";
 
 export async function generateClaudeMd(): Promise<string> {
   const cwd = process.cwd();
-  
+
   // Gather codebase context
   const files = await scanDirectory(cwd);
   const packageJson = await readFileContent(`${cwd}/package.json`);
   const readme = await readFileContent(`${cwd}/README.md`);
-  
+
   // Construct user message
   const userMessage = `
 ## Project Files
-${files.map(f => `- ${f}`).join('\n')}
+${files.map((f) => `- ${f}`).join("\n")}
 
 ## package.json
 ${packageJson}

@@ -58,7 +58,10 @@ export async function getProjectContext(projectRoot: string): Promise<string> {
   // Check for Python requirements
   const requirements = await readFile(path.join(projectRoot, "requirements.txt"));
   if (requirements) {
-    const deps = requirements.split("\n").filter(l => l.trim() && !l.startsWith("#")).slice(0, 20);
+    const deps = requirements
+      .split("\n")
+      .filter((l) => l.trim() && !l.startsWith("#"))
+      .slice(0, 20);
     contextParts.push(`## requirements.txt
 ${deps.join("\n")}`);
   }
@@ -87,19 +90,25 @@ ${goMod.slice(0, 1000)}`);
   // Get directory structure
   try {
     const entries = await fs.readdir(projectRoot, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory() && !e.name.startsWith(".") && e.name !== "node_modules");
-    const files = entries.filter(e => e.isFile());
+    const dirs = entries.filter(
+      (e) => e.isDirectory() && !e.name.startsWith(".") && e.name !== "node_modules"
+    );
+    const files = entries.filter((e) => e.isFile());
 
     contextParts.push(`## Directory Structure
-Directories: ${dirs.map(d => d.name).join(", ") || "none"}
-Root files: ${files.map(f => f.name).slice(0, 20).join(", ")}`);
+Directories: ${dirs.map((d) => d.name).join(", ") || "none"}
+Root files: ${files
+      .map((f) => f.name)
+      .slice(0, 20)
+      .join(", ")}`);
   } catch {
     // Can't read directory
   }
 
   // Check for existing CLAUDE.md
-  const existingClaudeMd = await readFile(path.join(projectRoot, "CLAUDE.md")) ||
-                           await readFile(path.join(projectRoot, ".claude", "CLAUDE.md"));
+  const existingClaudeMd =
+    (await readFile(path.join(projectRoot, "CLAUDE.md"))) ||
+    (await readFile(path.join(projectRoot, ".claude", "CLAUDE.md")));
   if (existingClaudeMd) {
     contextParts.push(`## Existing CLAUDE.md
 ${existingClaudeMd.slice(0, 2000)}`);

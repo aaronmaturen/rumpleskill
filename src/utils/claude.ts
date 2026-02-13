@@ -57,15 +57,11 @@ export async function runClaude(
     maxTurns = 5,
     cwd,
     verbose = false,
-    onOutput
+    onOutput,
   } = options;
 
   return new Promise((resolve) => {
-    const args = [
-      "-p", prompt,
-      "--model", model,
-      "--max-turns", String(maxTurns),
-    ];
+    const args = ["-p", prompt, "--model", model, "--max-turns", String(maxTurns)];
 
     // In verbose mode, use stream-json with partial messages for realtime output
     if (verbose) {
@@ -123,7 +119,9 @@ export async function runClaude(
                   for (const block of event.message.content) {
                     if (block.type === "text" && block.text) {
                       const preview = block.text.slice(0, 100).replace(/\n/g, " ");
-                      process.stdout.write(`\r\x1b[K${pc.dim(`  ${preview}${block.text.length > 100 ? "..." : ""}`)}`);
+                      process.stdout.write(
+                        `\r\x1b[K${pc.dim(`  ${preview}${block.text.length > 100 ? "..." : ""}`)}`
+                      );
                     }
                     if (block.type === "tool_use") {
                       console.log(`\n${pc.yellow(`  → ${block.name}`)}`);
@@ -136,7 +134,9 @@ export async function runClaude(
                 if (event.result) {
                   finalResult = event.result;
                 }
-                console.log(`\n${pc.green(`  ✓ Done (${event.num_turns} turns, ${event.duration_ms}ms)`)}`);
+                console.log(
+                  `\n${pc.green(`  ✓ Done (${event.num_turns} turns, ${event.duration_ms}ms)`)}`
+                );
                 break;
             }
           } catch {
@@ -162,7 +162,9 @@ export async function runClaude(
           if (event.type === "result" && event.result) {
             finalResult = event.result;
           }
-        } catch {}
+        } catch {
+          // Ignore JSON parse errors for incomplete buffer
+        }
       }
 
       if (code === 0) {
@@ -171,7 +173,7 @@ export async function runClaude(
       } else {
         resolve({
           success: false,
-          error: stderr || `Process exited with code ${code}`
+          error: stderr || `Process exited with code ${code}`,
         });
       }
     });

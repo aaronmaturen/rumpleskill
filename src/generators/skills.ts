@@ -16,11 +16,11 @@ export interface Skill {
 export interface GenerateSkillsOptions {
   projectRoot: string;
   agentsMdPath?: string;
-  skills?: string[];  // Specific skills to generate, or detect automatically
+  skills?: string[]; // Specific skills to generate, or detect automatically
   model?: ClaudeOptions["model"];
   verbose?: boolean;
-  agents?: AgentId[];  // Target agents (default: claude-code)
-  installMode?: InstallMode;  // symlink or copy (default: symlink)
+  agents?: AgentId[]; // Target agents (default: claude-code)
+  installMode?: InstallMode; // symlink or copy (default: symlink)
 }
 
 export interface GenerateSkillsResult {
@@ -75,9 +75,7 @@ export async function detectSkills(
 
     return skills.filter(
       (s): s is Skill =>
-        typeof s === "object" &&
-        typeof s.name === "string" &&
-        typeof s.description === "string"
+        typeof s === "object" && typeof s.name === "string" && typeof s.description === "string"
     );
   } catch (e) {
     console.error("Failed to parse skills JSON:", e);
@@ -129,11 +127,7 @@ export async function generateSkillFile(
     installMode = "symlink",
   } = options;
 
-  const prompt = buildGenerateSkillPrompt(
-    skill.name,
-    skill.description,
-    agentsMdContent
-  );
+  const prompt = buildGenerateSkillPrompt(skill.name, skill.description, agentsMdContent);
 
   const response = await runClaudeWithFiles(prompt, {
     model,
@@ -145,7 +139,7 @@ export async function generateSkillFile(
   if (!response.success || !response.result) {
     return {
       success: false,
-      error: response.error || `Failed to generate skill: ${skill.name}`
+      error: response.error || `Failed to generate skill: ${skill.name}`,
     };
   }
 
@@ -208,16 +202,14 @@ export async function generateSkills(
   } = options;
 
   // Read AGENTS.md
-  const agentsMdPath =
-    options.agentsMdPath ||
-    path.join(projectRoot, "AGENTS.md");
+  const agentsMdPath = options.agentsMdPath || path.join(projectRoot, "AGENTS.md");
 
   const agentsMdContent = await readFile(agentsMdPath);
 
   if (!agentsMdContent) {
     return {
       success: false,
-      error: `AGENTS.md not found at ${agentsMdPath}. Run 'rumpleskill agents' first.`
+      error: `AGENTS.md not found at ${agentsMdPath}. Run 'rumpleskill agents' first.`,
     };
   }
 
@@ -232,17 +224,19 @@ export async function generateSkills(
   // Detect or use provided skills
   let skills: Skill[];
   if (options.skills && options.skills.length > 0) {
-    skills = options.skills.map(name => ({
+    skills = options.skills.map((name) => ({
       name,
-      description: `Skill for ${name}`
+      description: `Skill for ${name}`,
     }));
     spinner?.succeed(`Using ${skills.length} specified skills`);
   } else {
     skills = await detectSkills(agentsMdContent, "haiku", verbose);
     if (skills.length > 0) {
-      spinner?.succeed(`Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}`);
+      spinner?.succeed(`Detected ${skills.length} skills: ${skills.map((s) => s.name).join(", ")}`);
       if (verbose) {
-        console.log(`\n${pc.green("✓")} Detected ${skills.length} skills: ${skills.map(s => s.name).join(", ")}\n`);
+        console.log(
+          `\n${pc.green("✓")} Detected ${skills.length} skills: ${skills.map((s) => s.name).join(", ")}\n`
+        );
       }
     }
   }
@@ -251,13 +245,13 @@ export async function generateSkills(
     spinner?.fail("No skills detected");
     return {
       success: false,
-      error: "No skills detected. Check your AGENTS.md content."
+      error: "No skills detected. Check your AGENTS.md content.",
     };
   }
 
   // Log target agents
   if (agents.length > 1) {
-    const agentNames = agents.map(id => AGENT_REGISTRY[id].displayName).join(", ");
+    const agentNames = agents.map((id) => AGENT_REGISTRY[id].displayName).join(", ");
     if (!verbose) {
       spinner?.succeed(`Target agents: ${agentNames}`);
     } else {
@@ -309,6 +303,6 @@ export async function generateSkills(
     success: errors.length === 0,
     skills,
     generated,
-    error: errors.length > 0 ? errors.join("\n") : undefined
+    error: errors.length > 0 ? errors.join("\n") : undefined,
   };
 }
