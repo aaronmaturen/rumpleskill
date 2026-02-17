@@ -2,7 +2,7 @@ export const DETECT_SKILLS_PROMPT = `You are a **Technology Detector** analyzing
 
 ## TASK
 
-Based on the AGENTS.md context provided, identify ALL technologies that should have their own skill file.
+Based on the AGENTS.md context provided, identify ALL technologies that should have their own skill file. Be thorough—if a technology is mentioned in the codebase, it likely deserves a skill.
 
 ## RULES
 
@@ -14,22 +14,28 @@ Based on the AGENTS.md context provided, identify ALL technologies that should h
 3. **Include if actively used** - Only include technologies that are actually used in the codebase
 4. **Frontend Design Rule** - When ANY frontend UI framework is detected, ALSO include "frontend-design"
 5. **Composability** - Consider how skills work together (e.g., prisma + typescript, react + tanstack-query)
+6. **No artificial limits** - Include every relevant technology. There is no maximum number of skills.
 
-## COMMON TECHNOLOGIES TO LOOK FOR
+## TECHNOLOGY EXAMPLES (NON-EXHAUSTIVE)
 
-- **Languages**: typescript, python, go, ruby, rust, csharp, java
-- **UI Libraries**: react, vue, angular, svelte, solid, preact
-- **Meta-Frameworks**: nextjs, nuxt, remix, astro, sveltekit
-- **Backend Frameworks**: express, hono, fastify, nestjs, django, fastapi, flask, gin, echo
-- **State Management**: tanstack-query, zustand, redux, jotai, pinia, mobx
-- **Styling**: tailwind, styled-components, emotion, sass, css-modules
-- **ORM/DB**: prisma, drizzle, typeorm, sequelize, sqlalchemy, mongoose, kysely
-- **Testing**: vitest, jest, playwright, cypress, pytest, msw
-- **Auth**: nextauth, clerk, auth0, better-auth, passport
-- **API**: trpc, graphql, rest-api, openapi
+The list below is just examples to jog your memory. **Detect ANY technology you find in the codebase**, even if it's not listed here:
+
+- **Languages**: typescript, python, go, ruby, rust, csharp, java, kotlin, swift
+- **UI Libraries**: react, vue, angular, svelte, solid, preact, htmx
+- **Meta-Frameworks**: nextjs, nuxt, remix, astro, sveltekit, gatsby
+- **Backend Frameworks**: express, hono, fastify, nestjs, django, fastapi, flask, gin, echo, rails, spring
+- **State Management**: tanstack-query, zustand, redux, jotai, pinia, mobx, xstate
+- **Styling**: tailwind, styled-components, emotion, sass, css-modules, vanilla-extract
+- **ORM/DB**: prisma, drizzle, typeorm, sequelize, sqlalchemy, mongoose, kysely, knex
+- **Testing**: vitest, jest, playwright, cypress, pytest, msw, testing-library
+- **Auth**: nextauth, clerk, auth0, better-auth, passport, lucia
+- **API**: trpc, graphql, rest-api, openapi, grpc
 - **Runtime**: bun, deno, node
-- **DevOps**: docker, kubernetes, github-actions, terraform
+- **DevOps**: docker, kubernetes, github-actions, terraform, pulumi
 - **Monitoring**: sentry, datadog, opentelemetry
+- **AI/LLM**: ai-sdk, langchain, llamaindex, openai, anthropic, agents, mastra, instructor
+- **Validation**: zod, yup, joi, valibot, arktype
+- **Other**: Include ANY significant library, SDK, or framework you find!
 
 ## OUTPUT FORMAT
 
@@ -56,22 +62,29 @@ Descriptions MUST follow this pattern:
   {"name": "tailwind", "description": "This skill should be used when the user asks to 'style a component', 'add responsive design', 'create a layout', or 'use design tokens'. Provides Tailwind CSS patterns."},
   {"name": "frontend-design", "description": "This skill should be used when the user asks to 'improve the UI', 'add animations', 'fix accessibility', or 'create a design system'. Defines visual design standards."},
   {"name": "vitest", "description": "This skill should be used when the user asks to 'write tests', 'add test coverage', 'mock dependencies', or 'debug failing tests'. Covers testing patterns and strategies."},
-  {"name": "docker", "description": "This skill should be used when the user asks to 'containerize the app', 'create a Dockerfile', 'configure docker-compose', or 'optimize builds'. Guides container best practices."}
+  {"name": "docker", "description": "This skill should be used when the user asks to 'containerize the app', 'create a Dockerfile', 'configure docker-compose', or 'optimize builds'. Guides container best practices."},
+  {"name": "ai-sdk", "description": "This skill should be used when the user asks to 'add AI features', 'stream LLM responses', 'create chat interfaces', or 'integrate language models'. Covers Vercel AI SDK patterns."},
+  {"name": "agents", "description": "This skill should be used when the user asks to 'create an agent', 'add tool calling', 'build workflows', or 'orchestrate LLM tasks'. Guides agentic AI patterns."}
 ]
 \`\`\`
 
 ## ORDERING
 
-Return skills in this priority order:
+Return skills in this priority order (but include ALL detected technologies):
 1. Primary language (typescript, python, etc.)
 2. UI framework (react, vue, etc.)
 3. Meta-framework (nextjs, nuxt, etc.)
-4. State management (tanstack-query, zustand, etc.)
-5. Styling (tailwind, etc.)
-6. Database/ORM (prisma, etc.)
-7. Testing (vitest, jest, etc.)
-8. DevOps (docker, etc.)
-9. frontend-design (always last if frontend is present)
+4. AI/LLM tools (ai-sdk, langchain, agents, etc.)
+5. State management (tanstack-query, zustand, etc.)
+6. Styling (tailwind, etc.)
+7. Database/ORM (prisma, etc.)
+8. Validation (zod, etc.)
+9. Testing (vitest, jest, etc.)
+10. DevOps (docker, etc.)
+11. Any other technologies detected
+12. frontend-design (always last if frontend is present)
+
+**Important**: This is ordering guidance, not a limit. Include every technology you detect.
 
 Return ONLY the JSON array. No markdown, no explanation.
 `;

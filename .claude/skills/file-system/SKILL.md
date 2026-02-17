@@ -2,185 +2,166 @@
 name: file-system
 description: This skill should be used when the user asks to 'scan directories', 'read files', 'parse JSON or Markdown', or 'traverse the file system'. Guides safe file I/O patterns and recursive directory operations.
 version: 1.0.0
+metadata:
+  internal: false
 ---
 
 # File System Operations
 
-Handles recursive directory traversal, file reading, and parsing operations using Node.js native APIs.
+Safe, async file system patterns using Node.js native `fs/promises` API with ESM imports.
 
 ## Capabilities
 
-- **Recursive Directory Scanning**: Traverse directories with ignore patterns
-- **Safe File Reading**: Handle encoding and error cases gracefully
-- **Content Parsing**: Extract meaningful data from JSON and Markdown files
-- **Pattern Exclusion**: Skip `node_modules/`, `.git/`, `dist/`, and hidden files
+- **Recursive Directory Scanning**: Traverse directories with intelligent ignore patterns
+- **Safe File Reading**: Error-handled content retrieval for JSON, Markdown, and text files
+- **Type-Safe Paths**: TypeScript-strict path handling with proper type guards
+- **Memory Efficient**: Stream-based operations where appropriate
 
-## Core Patterns
+## Input Requirements
 
-### Directory Scanning with Ignore Patterns
+- Absolute or relative file paths (resolved via `path.resolve()`)
+- Optional ignore patterns for directory traversal
+- File encoding (defaults to `utf-8`)
+
+## Patterns
+
+### Import Statement
 
 ```typescript
-import { readdir, stat } from "fs/promises";
-import { join } from "path";
+import fs from "fs/promises";
+import path from "path";
+```
 
-const IGNORE_PATTERNS = ["node_modules", ".git", "dist", "build", ".next", "coverage"];
+Always use `fs/promises` for async operations. Never use callback-based `fs` or synchronous `fs.*Sync()` methods.
 
-export async function scanDirectory(dir: string): Promise<string[]> {
+### Recursive Directory Scanning
+
+```typescript
+async function scanDirectory(
+  dir: string,
+  ignorePatterns: string[] = ["node_modules", ".git", "dist"]
+): Promise<string[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
   const files: string[] = [];
 
-  async function traverse(currentPath: string): Promise<void> {
-    const entries = await readdir(currentPath, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
 
-    for (const entry of entries) {
-      // Skip hidden files and ignored directories
-      if (entry.name.startsWith(".")) continue;
-      if (IGNORE_PATTERNS.includes(entry.name)) continue;
+    // Skip ignored patterns
+    if (ignorePatterns.some((pattern) => entry.name.includes(pattern))) {
+      continue;
+    }
 
-      const fullPath = join(currentPath, entry.name);
-
-      if (entry.isDirectory()) {
-        await traverse(fullPath);
-      } else {
-        files.push(fullPath);
-      }
+    if (entry.isDirectory()) {
+      files.push(...(await scanDirectory(fullPath, ignorePatterns)));
+    } else {
+      files.push(fullPath);
     }
   }
 
-  await traverse(dir);
   return files;
 }
 ```
 
-### Safe File Content Reading
+**Key Points:**
+
+- Use `withFileTypes: true` to avoid extra `stat()` calls
+- Check `entry.isDirectory()` before recursion
+- Always skip `node_modules/`, `.git/`, `dist/`, hidden files (`.dotfile`)
+
+### Safe File Reading
 
 ```typescript
-import { readFile } from "fs/promises";
-
-export async function readFileContent(path: string): Promise<string | null> {
+async function readFileContent(filePath: string): Promise<string | null> {
   try {
-    return await readFile(path, "utf-8");
+    return await fs.readFile(filePath, "utf-8");
   } catch (error) {
-    console.error(`Failed to read ${path}:`, error);
+    console.error(`Failed to read ${filePath}:`, error);
     return null;
   }
 }
 ```
 
-Use `utf-8` encoding explicitly. Return `null` on errors rather than throwing to allow partial results in batch operations.
+**Why:** File reads can fail (permissions, missing files). Return `null` on error instead of throwing to allow graceful degradation.
 
-### Filtering by Extension
-
-```typescript
-const markdownFiles = allFiles.filter((f) => f.endsWith(".md") || f.endsWith(".markdown"));
-
-const packageJsons = allFiles.filter((f) => f.endsWith("package.json"));
-```
-
-Use `.endsWith()` rather than regex for simple extension checks.
-
-### Parsing JSON Files
+### JSON Parsing
 
 ```typescript
-async function readPackageJson(path: string): Promise<Record<string, any> | null> {
-  const content = await readFileContent(path);
+async function readJsonFile<T>(filePath: string): Promise<T | null> {
+  const content = await readFileContent(filePath);
   if (!content) return null;
 
   try {
-    return JSON.parse(content);
+    return JSON.parse(content) as T;
   } catch (error) {
-    console.error(`Invalid JSON in ${path}`);
+    console.error(`Invalid JSON in ${filePath}:`, error);
     return null;
   }
 }
 ```
 
-Always wrap `JSON.parse()` in try-catch when reading untrusted files.
-
-### Gathering Codebase Context
+**Usage:**
 
 ```typescript
-async function gatherCodebaseContext(): Promise<string> {
-  const rootDir = process.cwd();
+interface PackageJson {
+  name: string;
+  dependencies?: Record<string, string>;
+}
 
-  // Scan for relevant files
-  const allFiles = await scanDirectory(rootDir);
-  const markdownFiles = allFiles.filter((f) => f.endsWith(".md"));
-  const configFiles = allFiles.filter(
-    (f) => f.endsWith("package.json") || f.endsWith("tsconfig.json")
-  );
-
-  // Read and combine content
-  let context = "";
-
-  for (const file of markdownFiles) {
-    const content = await readFileContent(file);
-    if (content) {
-      context += `\n## ${file}\n\n${content}\n`;
-    }
-  }
-
-  return context;
+const pkg = await readJsonFile<PackageJson>("./package.json");
+if (pkg?.dependencies) {
+  // Type-safe access
 }
 ```
 
-Build context strings by accumulating file contents with clear section headers.
+### Writing Files
+
+```typescript
+async function writeFile(filePath: string, content: string): Promise<void> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, content, "utf-8");
+}
+```
+
+**Always** create parent directories first with `{ recursive: true }`.
+
+### File Existence Check
+
+```typescript
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+```
+
+**Don't** use `fs.existsSync()` - keep everything async.
 
 ## Best Practices
 
-1. **Always exclude generated directories**: `dist/`, `build/`, `.next/`, `coverage/`
-2. **Use `fs/promises` API**: Avoid callback-style `fs` methods
-3. **Handle partial failures gracefully**: Don't fail entire operation if one file errors
-4. **Skip hidden files by default**: Start with `.` check before accessing file system
-5. **Use `path.join()`**: Never concatenate paths with string operations
-6. **Specify encoding explicitly**: Always use `'utf-8'` for text files
+1. **Use path.join() and path.resolve()** - Never concatenate paths with strings
+2. **Handle errors at read boundaries** - Don't let file errors crash the CLI
+3. **Filter early** - Apply ignore patterns during traversal, not after
+4. **Specify encoding** - Always pass `"utf-8"` explicitly to `readFile()`
+5. **Type file contents** - Use generics for JSON parsing (`readJsonFile<T>()`)
 
 ## Common Pitfalls
 
-- **Circular symlinks**: `scanDirectory()` doesn't detect circular links - can cause infinite loops
-- **Large binary files**: Reading everything as UTF-8 will corrupt binaries - filter by extension first
-- **Nested node_modules**: Ignore pattern only checks directory name, not full path - can miss nested modules
-- **File system race conditions**: Files can be deleted between `readdir()` and `readFile()` - always catch errors
-
-## Integration Points
-
-### With Claude API
-
-Pass scanned context as user message content:
-
-```typescript
-const context = await gatherCodebaseContext();
-await callClaude(systemPrompt, context);
-```
-
-### With Generators
-
-Each generator uses file system utilities to build specialized context:
-
-```typescript
-// src/generators/claude-md.ts
-import { scanDirectory, readFileContent } from "../utils/file-system.js";
-
-export async function generateClaudeMd(): Promise<string> {
-  const files = await scanDirectory(process.cwd());
-  // ... filter and process files
-}
-```
-
-## Performance Considerations
-
-- **Parallel reading**: Use `Promise.all()` for independent file reads
-- **Lazy loading**: Only read files needed for current command
-- **Stream large files**: For files >10MB, consider `createReadStream()` instead of `readFile()`
-
-```typescript
-// Parallel read example
-const contents = await Promise.all(files.map((f) => readFileContent(f)));
-```
+- **Forgetting `.js` extensions in imports** - ESM requires explicit extensions: `"./file-system.js"`
+- **Using sync methods** - `readFileSync()` blocks the event loop; use `await fs.readFile()`
+- **Not creating parent dirs** - `writeFile()` fails if the directory doesn't exist
+- **Throwing on missing files** - Return `null` instead for optional file reads
 
 ## Limitations
 
-- No symlink cycle detection
-- No file watching/change detection
-- No atomic write operations
-- No memory-efficient streaming for large directories
-- Ignore patterns are exact matches only (no glob support)
+- **No streaming support** - Current implementation reads entire files into memory (fine for config/markdown, not for large datasets)
+- **No glob patterns** - Uses simple string matching for ignore patterns, not full glob syntax
+- **No symlink handling** - Follows symlinks by default; may cause infinite loops if not careful
+
+## References
+
+- [Node.js fs/promises API](https://nodejs.org/docs/latest-v20.x/api/fs.html#promises-api)
+- [Node.js path module](https://nodejs.org/docs/latest-v20.x/api/path.html)

@@ -2,187 +2,170 @@
 name: typescript
 description: This skill should be used when the user asks to 'add types', 'fix type errors', 'create interfaces', 'improve type safety', or 'configure TypeScript'. Provides TypeScript strict mode patterns and ESM configuration for Node.js projects.
 version: 1.0.0
+metadata:
+  internal: false
 ---
 
 # TypeScript
 
-Guides TypeScript usage in Node.js ESM projects with strict mode enabled.
+TypeScript 5.x configuration for Node.js ESM projects with strict mode enabled.
 
 ## Capabilities
 
-- **Strict Mode Types**: Full `strict: true` compliance with no implicit any
-- **ESM Configuration**: Native ES modules with proper extensions and imports
-- **Type-Safe File Operations**: Strongly typed async/await patterns for fs/promises
-- **API Integration Types**: Type definitions for external APIs (Claude, etc.)
-- **Build Configuration**: Proper tsconfig.json for Node.js 20+ with ESM output
+- **Strict Type Safety**: Enforce strict mode for maximum type safety
+- **ESM Configuration**: Native ES modules for Node.js 20.x
+- **Module Patterns**: Type-safe exports and imports across project modules
+- **Async/Await Types**: Promise-based file I/O with proper typing
 
-## Input Requirements
+## TypeScript Configuration
 
-When adding types, provide:
-
-- The function/module being typed
-- Expected input/output shapes
-- Any external API schemas involved
-
-## Patterns
-
-### ESM Import Extensions
-
-```typescript
-// REQUIRED: Always use .js extensions in imports (not .ts)
-import { callClaude } from "../utils/claude.js";
-import { scanDirectory } from "../utils/file-system.js";
-
-// TypeScript compiles .ts to .js, so imports reference the OUTPUT
-```
-
-### File System Types
-
-```typescript
-import { readdir, readFile, stat } from "fs/promises";
-import { join } from "path";
-
-async function scanDirectory(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-
-  const files: string[] = [];
-  for (const entry of entries) {
-    const fullPath = join(dir, entry.name);
-
-    if (entry.isDirectory()) {
-      files.push(...(await scanDirectory(fullPath)));
-    } else if (entry.isFile()) {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
-}
-```
-
-### API Response Types
-
-```typescript
-// Define response shapes explicitly
-interface ClaudeStreamEvent {
-  type: "content_block_delta" | "message_stop";
-  delta?: {
-    type: "text_delta";
-    text: string;
-  };
-}
-
-async function callClaude(
-  systemPrompt: string,
-  userMessage: string,
-  verbose: boolean = false
-): Promise<string> {
-  // Implementation with typed responses
-}
-```
-
-### Generator Function Signatures
-
-```typescript
-// Generators return Promise<string> of markdown content
-export async function generateClaudeMd(): Promise<string> {
-  const context = await gatherContext();
-  return await callClaude(CLAUDE_MD_PROMPT, context);
-}
-
-// Utility functions use specific return types
-export async function readFileContent(path: string): Promise<string | null> {
-  try {
-    return await readFile(path, "utf-8");
-  } catch {
-    return null;
-  }
-}
-```
-
-### CLI Argument Parsing
-
-```typescript
-// Type command-line args explicitly
-interface CliArgs {
-  command: "agents" | string;
-  flags: Set<string>;
-}
-
-function parseArgs(argv: string[]): CliArgs {
-  const args = argv.slice(2);
-  const flags = new Set(args.filter((a) => a.startsWith("--")));
-  const command = args.find((a) => !a.startsWith("--")) ?? "";
-
-  return { command, flags };
-}
-```
-
-## Configuration
-
-### tsconfig.json
+This project uses strict mode with ESM targets:
 
 ```json
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+    "forceConsistentCasingInFileNames": true
+  }
 }
 ```
 
-### package.json Type Module
+## Module Patterns
 
-```json
-{
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsx src/index.ts",
-    "dev:watch": "tsx watch src/index.ts"
+### File Extensions in Imports
+
+ESM requires `.js` extensions even when importing `.ts` files:
+
+```typescript
+// CORRECT
+import { callClaude } from "../utils/claude.js";
+import { scanDirectory } from "../utils/file-system.js";
+
+// WRONG
+import { callClaude } from "../utils/claude";
+```
+
+### Export Patterns
+
+**Generators** - Export async functions:
+
+```typescript
+// src/generators/claude-md.ts
+export async function generateClaudeMd(): Promise<string> {
+  const context = await gatherContext();
+  return await callClaude(CLAUDE_MD_PROMPT, context);
+}
+```
+
+**Prompts** - Export string constants:
+
+```typescript
+// src/prompts/claude-md.ts
+export const CLAUDE_MD_PROMPT = `
+You are a technical writer...
+`;
+```
+
+**Utilities** - Export typed functions:
+
+```typescript
+// src/utils/file-system.ts
+export async function scanDirectory(dir: string, ignorePatterns: string[] = []): Promise<string[]> {
+  // Implementation
+}
+```
+
+## Async/Await Typing
+
+All file operations return properly typed Promises:
+
+```typescript
+import { readFile } from "fs/promises";
+
+// Async function with explicit return type
+async function readFileContent(path: string): Promise<string> {
+  try {
+    const content = await readFile(path, "utf-8");
+    return content;
+  } catch (error) {
+    throw new Error(`Failed to read ${path}: ${error}`);
   }
+}
+```
+
+## Error Handling Types
+
+Type narrow errors in catch blocks:
+
+```typescript
+try {
+  await someOperation();
+} catch (error) {
+  // Type narrow to Error
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`Operation failed: ${message}`);
+}
+```
+
+## Interface Patterns
+
+Define interfaces for structured data:
+
+```typescript
+interface FileSystemEntry {
+  path: string;
+  type: "file" | "directory";
+  content?: string;
+}
+
+interface GeneratorOptions {
+  verbose?: boolean;
+  outputPath?: string;
+}
+```
+
+## Type Imports
+
+Import types explicitly when needed:
+
+```typescript
+import type { Message } from "@anthropic-ai/sdk/resources/messages";
+
+async function callClaude(prompt: string, context: string): Promise<Message> {
+  // Implementation
 }
 ```
 
 ## Best Practices
 
-1. **Always use `.js` extensions in imports** - TypeScript doesn't rewrite them for ESM
-2. **Enable all strict flags** - Catch errors at compile time, not runtime
-3. **Type external API responses** - Don't trust `any` from HTTP calls
-4. **Use `Promise<T>` return types** - Be explicit about async boundaries
-5. **Prefer `interface` over `type`** for object shapes - Better error messages
-6. **Use `readonly` for immutable data** - Prevent accidental mutations
-7. **Avoid `as` type assertions** - Fix the types, don't silence them
+1. **Always enable strict mode** - Catches null/undefined errors at compile time
+2. **Use `.js` extensions** - Required for Node.js ESM imports
+3. **Explicit return types** - Document function contracts, especially for async functions
+4. **No `any` types** - Use `unknown` and type guards instead
+5. **Top-level await** - Enabled via `module: "NodeNext"` for CLI scripts
 
 ## Common Pitfalls
 
-- **Missing `.js` in imports**: TypeScript compiler doesn't add them automatically in ESM mode
-- **Relative paths without extensions**: `import { x } from './util'` fails at runtime, use `'./util.js'`
-- **Mixing CJS and ESM**: Don't use `require()` or `module.exports` in type: "module" projects
-- **Incorrect `moduleResolution`**: Must be `"node"` or `"node16"` for Node.js projects
-- **Forgetting top-level `await`**: Requires both ESM and `target: "ES2022"` or higher
+- **Missing `.js` extension**: ESM imports fail at runtime without explicit extensions
+- **Relative imports without `./`**: Use `"./utils/file.js"` not `"utils/file.js"`
+- **Mixed CJS/ESM**: Stick to pure ESM - no `require()` or `module.exports`
+- **Untyped catch blocks**: Always type narrow `error` to `Error` or `unknown`
 
 ## Limitations
 
-- No runtime type checking - use Zod/io-ts if needed for external data validation
-- Type definitions for npm packages may be missing - install `@types/*` packages when needed
-- `.d.ts` files not automatically generated for `dist/` - add `"declaration": true` to tsconfig if publishing types
+- **No decorators**: Not used in this project (experimental feature)
+- **No namespaces**: Use ES modules instead
+- **No triple-slash directives**: Not needed with modern TypeScript
 
 ## References
 
-- [TypeScript ESM Node Docs](https://www.typescriptlang.org/docs/handbook/modules/guides/choosing-compiler-options.html)
-- [Node.js ES Modules](https://nodejs.org/api/esm.html)
-- Project tsconfig: `tsconfig.json`
+- [TypeScript Handbook - Modules](https://www.typescriptlang.org/docs/handbook/modules.html)
+- [Node.js ESM Documentation](https://nodejs.org/api/esm.html)
+- [TypeScript Compiler Options](https://www.typescriptlang.org/tsconfig)
