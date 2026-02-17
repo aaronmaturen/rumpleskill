@@ -22,7 +22,25 @@ Create a single CLAUDE.md file with these sections:
 
 ### Tech Stack Section (CRITICAL)
 
-This section is used to auto-detect which skills to generate. Be specific and comprehensive:
+This section is used to auto-detect which skills to generate. Be specific and comprehensive.
+
+**DEPENDENCY FILTERING**: Only include dependencies that are relevant to understanding the codebase architecture and writing features.
+
+INCLUDE:
+- Frameworks (React, Express, Django, FastAPI, etc.)
+- Databases and ORMs (Prisma, Mongoose, SQLAlchemy, etc.)
+- Authentication libraries (NextAuth, Passport, etc.)
+- API clients and utilities used in business logic
+- State management (Redux, Zustand, TanStack Query, etc.)
+- Testing frameworks (for the Testing section only)
+
+EXCLUDE from Tech Stack (these add noise without value):
+- Type definitions (@types/*, typings)
+- Linters and formatters (eslint, prettier, black, flake8, pylint, rustfmt)
+- Build tools (webpack, vite, tsup, esbuild, rollup)
+- TypeScript/compilers (typescript, tsc, babel)
+- Git hooks (husky, lint-staged)
+- Generic dev utilities that don't affect code patterns
 
 \`\`\`markdown
 ## Tech Stack
@@ -99,12 +117,14 @@ Example:
 
 ## QUALITY REQUIREMENTS
 
-- 150-300 lines of substantive content
+- **Size target**: 150-300 lines of substantive content (aim for ~20-30KB max)
+- Be concise - this file is loaded into AI context, so brevity has value
 - All commands must be copy-paste ready
 - No placeholder text like "[TODO]" or "[Add later]"
 - Version numbers: use major version only (e.g., "5.x" not "5.1.0")
 - Include rationale for architectural decisions
 - Be specific about which technologies are used for what purpose
+- Prefer bullet points over verbose paragraphs
 
 ## MODULAR ARCHITECTURE (OPTIONAL)
 
