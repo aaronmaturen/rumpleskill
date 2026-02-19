@@ -10,15 +10,16 @@ Create a CLAUDE.md file that serves as the definitive guide for AI assistants wo
 Create a single CLAUDE.md file with these sections:
 
 1. **Project Overview** - What this project does, in 2-3 sentences
-2. **Tech Stack** - Languages, frameworks, key dependencies (this is CRITICAL for skill generation)
-3. **Project Structure** - Directory layout with explanations
-4. **Development Setup** - How to install, configure, and run locally
-5. **Key Commands** - Build, test, lint, deploy commands
-6. **Architecture** - How the codebase is organized, key patterns
-7. **Code Conventions** - Naming, file organization, style rules
-8. **Testing** - How to run tests, testing patterns used, mocking approach
-9. **Common Workflows** - Step-by-step for common tasks (add feature, fix bug, etc.)
-10. **Environment Variables** - Required config with examples
+2. **Tech Stack** - Languages, frameworks, key dependencies (prose for humans)
+3. **Technologies** - Simple list of technology identifiers (REQUIRED - machine-parsed for skill generation)
+4. **Project Structure** - Directory layout with explanations
+5. **Development Setup** - How to install, configure, and run locally
+6. **Key Commands** - Build, test, lint, deploy commands
+7. **Architecture** - How the codebase is organized, key patterns
+8. **Code Conventions** - Naming, file organization, style rules
+9. **Testing** - How to run tests, testing patterns used, mocking approach
+10. **Common Workflows** - Step-by-step for common tasks (add feature, fix bug, etc.)
+11. **Environment Variables** - Required config with examples
 
 ### Tech Stack Section (CRITICAL)
 
@@ -67,6 +68,33 @@ EXCLUDE from Tech Stack (these add noise without value):
 ### DevOps
 - **CI/CD**: GitHub Actions
 - **Containers**: Docker with docker-compose
+\`\`\`
+
+### Technologies Section (REQUIRED for skill generation)
+
+**IMPORTANT**: After the Tech Stack section, include a \`## Technologies\` section with a simple list of technology identifiers. This is machine-parsed for automatic skill generation.
+
+Rules:
+- Use lowercase, kebab-case names (e.g., \`tanstack-query\`, not \`TanStack Query\`)
+- One technology per line, prefixed with \`- \`
+- Include the primary language first
+- Include ALL significant technologies from Tech Stack
+- Add \`frontend-design\` if any frontend UI framework is present
+
+\`\`\`markdown
+## Technologies
+
+- typescript
+- react
+- nextjs
+- tanstack-query
+- zustand
+- tailwind
+- prisma
+- vitest
+- playwright
+- docker
+- frontend-design
 \`\`\`
 
 ## TECHNOLOGY ADAPTABILITY (CRITICAL)

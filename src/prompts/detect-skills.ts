@@ -86,7 +86,12 @@ Return skills in this priority order (but include ALL detected technologies):
 
 **Important**: This is ordering guidance, not a limit. Include every technology you detect.
 
-Return ONLY the JSON array. No markdown, no explanation.
+## CRITICAL OUTPUT RULES
+
+1. Return ONLY the JSON array. No markdown, no explanation, no commentary.
+2. If you cannot detect any technologies, return an empty array: \`[]\`
+3. Do NOT say "I don't have enough information" or similar—just return \`[]\`
+4. Your response must start with \`[\` and end with \`]\`
 `;
 
 export function buildDetectSkillsPrompt(agentsMdContent: string): string {

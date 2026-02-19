@@ -31,13 +31,134 @@ export interface GenerateSkillsResult {
 }
 
 /**
+ * Parse the ## Technologies section from AGENTS.md directly
+ * Returns null if section not found or empty
+ */
+function parseTechnologiesSection(agentsMdContent: string): string[] | null {
+  // Look for ## Technologies section
+  const techMatch = agentsMdContent.match(/^## Technologies\s*\n([\s\S]*?)(?=^## |\n*$)/m);
+  if (!techMatch) {
+    return null;
+  }
+
+  const techSection = techMatch[1];
+  const technologies: string[] = [];
+
+  // Parse lines that start with "- "
+  const lines = techSection.split("\n");
+  for (const line of lines) {
+    const match = line.match(/^- ([a-z0-9-]+)\s*$/);
+    if (match) {
+      technologies.push(match[1]);
+    }
+  }
+
+  return technologies.length > 0 ? technologies : null;
+}
+
+/**
+ * Generate a description for a technology name
+ */
+function generateSkillDescription(name: string): string {
+  const descriptions: Record<string, string> = {
+    typescript:
+      "This skill should be used when the user asks to 'add types', 'fix type errors', 'create interfaces', 'improve type safety', or 'configure TypeScript'. Provides TypeScript strict mode patterns and ESM configuration for Node.js projects.",
+    react:
+      "This skill should be used when the user asks to 'create a component', 'add a hook', 'manage state', or 'handle events'. Guides React component architecture and patterns.",
+    nextjs:
+      "This skill should be used when the user asks to 'add a page', 'create an API route', 'configure middleware', or 'optimize performance'. Covers Next.js App Router patterns.",
+    vue: "This skill should be used when the user asks to 'create a component', 'add composables', 'manage state', or 'handle events'. Guides Vue component architecture and Composition API patterns.",
+    nuxt: "This skill should be used when the user asks to 'add a page', 'create an API route', 'configure middleware', or 'use Nuxt modules'. Covers Nuxt 3 patterns.",
+    angular:
+      "This skill should be used when the user asks to 'create a component', 'add a service', 'configure routing', or 'handle forms'. Guides Angular architecture and patterns.",
+    svelte:
+      "This skill should be used when the user asks to 'create a component', 'add stores', 'handle events', or 'manage state'. Guides Svelte component patterns.",
+    sveltekit:
+      "This skill should be used when the user asks to 'add a route', 'create endpoints', 'handle forms', or 'configure load functions'. Covers SvelteKit patterns.",
+    prisma:
+      "This skill should be used when the user asks to 'add a model', 'create a migration', 'write a query', or 'seed the database'. Defines Prisma schema and query patterns.",
+    drizzle:
+      "This skill should be used when the user asks to 'add a schema', 'create a migration', 'write a query', or 'configure the database'. Covers Drizzle ORM patterns.",
+    "tanstack-query":
+      "This skill should be used when the user asks to 'fetch data', 'cache responses', 'handle loading states', or 'invalidate queries'. Guides data fetching patterns.",
+    zustand:
+      "This skill should be used when the user asks to 'add global state', 'create a store', 'persist state', or 'manage client state'. Covers Zustand state management.",
+    redux:
+      "This skill should be used when the user asks to 'add state management', 'create slices', 'handle async actions', or 'configure the store'. Covers Redux Toolkit patterns.",
+    tailwind:
+      "This skill should be used when the user asks to 'style a component', 'add responsive design', 'create a layout', or 'use design tokens'. Provides Tailwind CSS patterns.",
+    vitest:
+      "This skill should be used when the user asks to 'write tests', 'add test coverage', 'mock dependencies', or 'debug failing tests'. Covers testing patterns and strategies.",
+    jest: "This skill should be used when the user asks to 'write tests', 'add test coverage', 'mock modules', or 'configure Jest'. Covers Jest testing patterns.",
+    playwright:
+      "This skill should be used when the user asks to 'write E2E tests', 'test user flows', 'add browser tests', or 'debug test failures'. Covers Playwright testing patterns.",
+    cypress:
+      "This skill should be used when the user asks to 'write E2E tests', 'test user interactions', 'add component tests', or 'debug test failures'. Covers Cypress testing patterns.",
+    docker:
+      "This skill should be used when the user asks to 'containerize the app', 'create a Dockerfile', 'configure docker-compose', or 'optimize builds'. Guides container best practices.",
+    express:
+      "This skill should be used when the user asks to 'add a route', 'create middleware', 'handle requests', or 'configure the server'. Covers Express.js patterns.",
+    fastify:
+      "This skill should be used when the user asks to 'add a route', 'create plugins', 'handle requests', or 'configure schemas'. Covers Fastify patterns.",
+    hono: "This skill should be used when the user asks to 'add a route', 'create middleware', 'handle requests', or 'deploy to edge'. Covers Hono patterns.",
+    nestjs:
+      "This skill should be used when the user asks to 'add a module', 'create a controller', 'add a service', or 'configure dependency injection'. Covers NestJS architecture.",
+    trpc: "This skill should be used when the user asks to 'add a procedure', 'create a router', 'handle mutations', or 'configure the client'. Covers tRPC patterns.",
+    graphql:
+      "This skill should be used when the user asks to 'add a query', 'create a mutation', 'define types', or 'configure resolvers'. Covers GraphQL patterns.",
+    zod: "This skill should be used when the user asks to 'add validation', 'create schemas', 'parse data', or 'infer types'. Covers Zod schema patterns.",
+    python:
+      "This skill should be used when the user asks to 'write Python code', 'add type hints', 'configure virtual environments', or 'manage dependencies'. Covers Python best practices.",
+    django:
+      "This skill should be used when the user asks to 'add a model', 'create a view', 'configure URLs', or 'handle forms'. Covers Django patterns.",
+    fastapi:
+      "This skill should be used when the user asks to 'add an endpoint', 'create schemas', 'handle authentication', or 'configure middleware'. Covers FastAPI patterns.",
+    flask:
+      "This skill should be used when the user asks to 'add a route', 'create blueprints', 'handle requests', or 'configure the app'. Covers Flask patterns.",
+    go: "This skill should be used when the user asks to 'write Go code', 'add error handling', 'create packages', or 'configure modules'. Covers Go best practices.",
+    rust: "This skill should be used when the user asks to 'write Rust code', 'handle ownership', 'create modules', or 'manage dependencies'. Covers Rust best practices.",
+    "ai-sdk":
+      "This skill should be used when the user asks to 'add AI features', 'stream LLM responses', 'create chat interfaces', or 'integrate language models'. Covers Vercel AI SDK patterns.",
+    agents:
+      "This skill should be used when the user asks to 'create an agent', 'add tool calling', 'build workflows', or 'orchestrate AI tasks'. Guides agentic AI patterns.",
+    "frontend-design":
+      "This skill should be used when the user asks to 'improve the UI', 'add animations', 'fix accessibility', or 'create a design system'. Defines visual design standards.",
+  };
+
+  return (
+    descriptions[name] ||
+    `This skill should be used when the user asks to work with ${name}. Provides ${name} patterns and best practices.`
+  );
+}
+
+/**
  * Detect which skills should be generated based on AGENTS.md
+ * First tries to parse the explicit ## Technologies section,
+ * then falls back to AI detection if not found
  */
 export async function detectSkills(
   agentsMdContent: string,
   model: ClaudeOptions["model"] = "haiku",
   verbose = false
 ): Promise<Skill[]> {
+  // First, try to parse the explicit Technologies section
+  const technologies = parseTechnologiesSection(agentsMdContent);
+
+  if (technologies && technologies.length > 0) {
+    if (verbose) {
+      console.log(`Found explicit Technologies section with ${technologies.length} entries`);
+    }
+    return technologies.map((name) => ({
+      name,
+      description: generateSkillDescription(name),
+    }));
+  }
+
+  // Fall back to AI detection
+  if (verbose) {
+    console.log("No Technologies section found, falling back to AI detection...");
+  }
+
   const prompt = buildDetectSkillsPrompt(agentsMdContent);
 
   const response = await runClaudeWithFiles(prompt, {
@@ -66,7 +187,19 @@ export async function detectSkills(
       jsonStr = jsonStr.slice(0, -3);
     }
 
-    const skills = JSON.parse(jsonStr.trim());
+    jsonStr = jsonStr.trim();
+
+    // Validate the response looks like JSON array before parsing
+    if (!jsonStr.startsWith("[")) {
+      // Model returned conversational text instead of JSON
+      console.error(
+        "Model returned non-JSON response. Expected JSON array but got:",
+        jsonStr.slice(0, 100) + (jsonStr.length > 100 ? "..." : "")
+      );
+      return [];
+    }
+
+    const skills = JSON.parse(jsonStr);
 
     if (!Array.isArray(skills)) {
       console.error("Invalid skills response: not an array");
